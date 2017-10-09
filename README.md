@@ -10,7 +10,7 @@ Copy file `myboard.cfg.default` to `local.cfg` then edit local.cfg to change db 
 
 Following this command to run apps. Same with Windows or Linux.
 
-> myboard <envname>
+> myboard envname
 
-envname parameter is `local` for default. If envname is `prod` , App finds `prod.cfg` file and use it for config.
+If you don't pass envname parameter, app use `local` for default. If envname is `prod` , App finds `prod.cfg` file and use it for config.
 
