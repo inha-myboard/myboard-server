@@ -1,5 +1,5 @@
 @echo off
-set ENV=%1
-IF NOT DEFINED ENV set "ENV=local"
-set MYBOARD_SETTINGS=%CD%/%ENV%.cfg
-python index.py 
+set MYBOARD_ENV=%1
+IF NOT DEFINED MYBOARD_ENV set "MYBOARD_ENV=local"
+set MYBOARD_SETTINGS=%CD%/%MYBOARD_ENV%.cfg
+python myboard_server.py
