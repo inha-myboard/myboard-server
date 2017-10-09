@@ -1,2 +1,5 @@
-export MYBOARD_SETTINGS=`pwd`/$1.cfg
-python main.py 
+@echo off
+set ENV=%1
+IF NOT DEFINED ENV set "ENV=local"
+set MYBOARD_SETTINGS=%CD%/%ENV%.cfg
+python index.py 

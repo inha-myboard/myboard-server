@@ -1,2 +1,7 @@
-export MYBOARD_SETTINGS=`pwd`/$1.cfg
-python main.py 
+export MYBOARD_ENV=$1
+if [ $# -eq 0 ]
+  then
+    MYBOARD_ENV=local
+fi
+export MYBOARD_SETTINGS=`pwd`/$MYBOARD_ENV.cfg
+python index.py

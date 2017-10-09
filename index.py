@@ -4,7 +4,7 @@
 #flask
 import flask
 from flask import Flask, render_template, request
-from flask.ext.mysql import MySQL
+from flaskext.mysql import MySQL
 
 #google oauth2
 import json
@@ -13,7 +13,7 @@ import httplib2
 from apiclient import discovery
 from oauth2client import client
 
-app = flask.Flask(__name__)
+app = flask.Flask(__name__, static_folder='assets')
 mysql = MySQL()
 
 @app.route('/')
@@ -48,21 +48,26 @@ def oauth2callback():
 
 @app.route('/dashboard')
 def dashboard():
-	return(render_template('dashboard.html'))
+  return(render_template('dashboard.html'))
 
 @app.route('/<name>')
 def test(name = None):
-	return(render_template(name+'.html'))
+  return(render_template(name+'.html'))
 
 if __name__ == '__main__':
-	#MySQL configurations
-	app.config['MYSQL_DATABASE_USER'] = 'root'
-	app.config['MYSQL_DATABASE_PASSWORD'] = '1234'
-	app.config['MYSQL_DATABASE_DB'] = 'mydb'
-	app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
-	mysql.init_app(app)
-	mysql.connect()
-	
-	app.secret_key = str(uuid.uuid4())
-	app.debug = False
-	app.run()
+
+  #MySQL configurations
+  app.config['MYSQL_DATABASE_USER'] = 'root'
+  app.config['MYSQL_DATABASE_PASSWORD'] = '1234'
+  app.config['MYSQL_DATABASE_DB'] = 'mydb'
+  app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
+
+  app.config.from_object(__name__)
+  app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
+
+  mysql.init_app(app)
+  mysql.connect()
+
+  app.secret_key = str(uuid.uuid4())
+  app.debug = False
+  app.run()

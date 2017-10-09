@@ -1,0 +1,14 @@
+# IDE & BUILD
+.idea
+bin
+build
+out
+.gradle
+
+# ETC
+__pycache__
+*.log
+
+# App Env
+*.cfg
+
