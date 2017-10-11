@@ -70,4 +70,4 @@ if __name__ == '__main__':
 
   app.secret_key = str(uuid.uuid4())
   app.debug = False
-  app.run()
+  app.run(host='0.0.0.0', port='80')
