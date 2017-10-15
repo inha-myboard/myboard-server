@@ -8,7 +8,10 @@ out
 # ETC
 __pycache__
 *.log
+*.json
+*.exe
 
+.exe
 # App Env
 *.cfg
 
