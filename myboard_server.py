@@ -62,8 +62,8 @@ if __name__ == '__main__':
   app.config['MYSQL_DATABASE_DB'] = 'mydb'
   app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
 
-  app.config.from_object(__name__)
-  app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
+  # app.config.from_object(__name__)
+  # app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
 
   mysql.init_app(app)
   mysql.connect()
