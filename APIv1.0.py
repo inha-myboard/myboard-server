@@ -28,6 +28,14 @@ def inspectorAPI():
 	return(rst)
 
 class CreateApi(Resource):
+	def get(self):
+		try:
+			query = "SELECT * from myboard.api"
+			cursor.execute(query)
+			rows = cursor.fetchall()
+			return(rows)
+		except Exception as e:
+			return({'error':str(e)})
 	def post(self):
 		try:
 			parser = reqparse.RequestParser()
@@ -40,17 +48,26 @@ class CreateApi(Resource):
 			_apiBody = args['body']
 			_apiSegments = args['segments']
 			
-			query = "INSERT into api (id, type, url, selector_json) values (0,%s,%s,%s)"
-			cursor.execute(query, (_apiBody, _apiUrl, _apiSegments))
+			query = "INSERT INTO myboard.api (id, type, selector_json) VALUES (null, %s,%s)"
+			cursor.execute(query, (_apiBody, _apiSegments))
 			conn.commit()
-			data = cursor.fetchone()
-
-			if len(data) is 0:
-				conn.commit()
-				return({'StatusCode': '200', 'Message': 'User creation success'})
-			else:
-				return({'StatusCode': '1000', 'Message': str(data[0])})
-			# return( {'status':'success'})
+			return({'StatusCode': '200', 'query': query%(_apiBody, _apiSegments)})
+		except Exception as e:
+			return({'error':str(e)})
+	def put(self):
+		try:
+			query = "UPDATE myboard.api SET type = \"ok\" WHERE id = 1"
+			cursor.execute(query)
+			conn.commit()
+			return("test")
+		except Exception as e:
+			return({'error':str(e)})
+	def delete(self):
+		try:
+			query = "DELETE FROM myboard.api WHERE id = 1"
+			cursor.execute(query)
+			conn.commit()
+			return("delete")
 		except Exception as e:
 			return({'error':str(e)})
 
@@ -60,12 +77,12 @@ if __name__ == '__main__':
 	#MySQL configurations
 	app.config['MYSQL_DATABASE_USER'] = 'root'
 	app.config['MYSQL_DATABASE_PASSWORD'] = '1234'
-	app.config['MYSQL_DATABASE_DB'] = 'mydb'
+	app.config['MYSQL_DATABASE_DB'] = 'myboard'
 	app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
 	mysql.init_app(app)
 	conn = mysql.connect()
 	cursor = conn.cursor()
 
-	app.run(debug=False)
+	app.run(port = 8003, debug=False)
 
 #DB, flask
