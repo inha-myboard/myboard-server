@@ -11,45 +11,41 @@ app = Flask(__name__)
 api = Api(app)
 #mySQL
 mysql = MySQL()
-#selenium
-# driver = webdriver.PhantomJS('./PhantomJS.exe')
 
-def inspector():
-	inputjson = """{"type":"static","body_selector":"html > body > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div > ul > li","segments":[{"selector":"a > span:nth-child(1)","name":"rank"},{"selector":"a > span:nth-child(2)","name":"name"}]}"""
+
+def inspector(inputjson):
+	driver = webdriver.PhantomJS('./PhantomJS.exe')
 	data = json.loads(inputjson)
-	url = 'https://www.naver.com/'
-	
-	driver.get(url)
+	driver.get(data["url"])
 	body = driver.find_element_by_css_selector(data['body_selector'])
-
 	rst = list()
 	for i in range(len(data["segments"])):
 		rst.append(body.find_element_by_css_selector(data["segments"][i]['selector']).text)
+	driver.close()
 	return(rst)
+
+def selectSQL(query): #return
+	try:
+		cursor.execute(query)
+		rows = cursor.fetchall()
+		return(rows)
+	except Exception as e:
+		return({'error':str(e)})
+
+def executeSQL(query):
+	try:
+		cursor.execute(query)
+		conn.commit()
+		return({'StatusCode': '200', 'query': query})
+	except Exception as e:
+		return({'error':str(e)})
 
 class myboardAPI(Resource):
 	def get(self):
-		try:
-			query = "SELECT type, selector_json from myboard.api"
-			cursor.execute(query)
-			rows = cursor.fetchall()
-			return(rows)
-		except Exception as e:
-			return({'error':str(e)})
+		return(selectSQL("SELECT type, selector_json from myboard.api"))
 	def post(self):
 		try:
 			#parsing
-			# parser = reqparse.RequestParser()
-			# parser.add_argument('url', type=str, required=True)
-			# parser.add_argument('body_selector', type=str, required=True)
-			# parser.add_argument('segments', type=str ,action='append', required=True)
-			# parser.add_argument('type', type=str, required=True)
-			# args = parser.parse_args()
-
-			# _apiUrl = args['url']
-			# _apiBody = args['body_selector']
-			# _apiSegments = args['segments']
-			# _apiType = args['type']
 			jsondata = request.get_json(force=True)
 			_apiUrl = jsondata['url']
 			_apiBody = jsondata['body_selector']
@@ -57,63 +53,50 @@ class myboardAPI(Resource):
 			_apiType = jsondata['type']
 
 			#SQL
-			query = "INSERT INTO myboard.api (id, type, selector_json) VALUES (null, %s,%s)"
-			cursor.execute(query, (_apiType, jsondata))
-			conn.commit()
-			return({'StatusCode': '200', 'query': query%(_apiType, jsondata)})
+			query = "INSERT INTO myboard.api (id, type, selector_json) VALUES (null, %s,%s)", (_apiType, jsondata)
+			return(insertSQL(query))
 		except Exception as e:
 			return({'error':str(e)})
 	def put(self):
-		try:
-			query = "UPDATE myboard.api SET type = \"ok\" WHERE id = 1"
-			cursor.execute(query)
-			conn.commit()
-			return("test")
-		except Exception as e:
-			return({'error':str(e)})
+		query = "UPDATE myboard.api SET type = \"ok\" WHERE id = 1"
+		return(executeSQL(query))
 	def delete(self):
-		try:
-			query = "DELETE FROM myboard.api WHERE id = 1"
-			cursor.execute(query)
-			conn.commit()
-			return("delete")
-		except Exception as e:
-			return({'error':str(e)})
+		query = "DELETE FROM myboard.api WHERE id = 1"
+		return(executeSQL(query))
 
 class inspectorAPI(Resource):
 	def post(self):
-		return(inspector())
-
-class componentAPI(Resource):
-	def post(self):
-		try:
-			query = "SELECT * from myboard.compoenet"
-			cursor.execute(query)
-			rows = cursor.fetchall()
-			return(rows)
-		except Exception as e:
-			return({'error':str(e)})
+		inputjson = """{"url":"http://www.naver.com",type":"static","body_selector":"html > body > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div > ul > li","segments":[{"selector":"a > span:nth-child(1)","name":"rank"},{"selector":"a > span:nth-child(2)","name":"name"}]}"""
+		return(inspector(inputjson))
 
 class widgetAPI(Resource):
 	def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
-		return()
+		query = ""
+		return(executeSQL(query))
 	def post(self): #insert
-		return()
+		query = ""
+		return(insertSQL(query))
 	def put(self): #update
-		return()
+		query = ""
+		return(executeSQL(query))
 	def delete(self):
-		return()
+		query = ""
+		return(executeSQL(query))
 
 class dashboardAPI(Resource):
 	def get(self): #dashboard list
-		return()
+		query = ""
+		return(executeSQL(query))
 	def post(self): #insert
-		return()
+		query = ""
+		return(insertSQL(query))
 	def delete(self): #del
-		return()
+		query = ""
+		return(executeSQL(query))
+
+
 api.add_resource(myboardAPI, '/myboardapi')
 api.add_resource(inspectorAPI, '/inspectorapi')
-api.add_resource(componentAPI, '/componentapi')
 api.add_resource(widgetAPI, '/widgetapi')
 api.add_resource(dashboardAPI, '/dashboardapi')
 
@@ -123,10 +106,11 @@ if __name__ == '__main__':
 	app.config['MYSQL_DATABASE_PASSWORD'] = '1234'
 	app.config['MYSQL_DATABASE_DB'] = 'myboard'
 	app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
+	
+	app.config.from_object(__name__)
+	app.config.from_envvar('MYBOARD_SETTINGS', silent=True)
 	mysql.init_app(app)
 	conn = mysql.connect()
 	cursor = conn.cursor()
 
 	app.run(debug=False)
-
-#DB, flask
