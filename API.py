@@ -1,5 +1,5 @@
 from selenium import webdriver
-import time
+import time, re
 import json
 from flask import Flask, jsonify, request
 from flaskext.mysql import MySQL
@@ -12,7 +12,6 @@ api = Api(app)
 #mySQL
 mysql = MySQL()
 
-
 def inspector(inputjson):
 	driver = webdriver.PhantomJS('./PhantomJS.exe')
 	data = json.loads(inputjson)
@@ -22,27 +21,29 @@ def inspector(inputjson):
 	for i in range(len(data["segments"])):
 		rst.append(body.find_element_by_css_selector(data["segments"][i]['selector']).text)
 	driver.close()
+	print(rst)
 	return(rst)
 
-def selectSQL(query): #return
+def selectSQL(query, parameter): #return
 	try:
-		cursor.execute(query)
+		cursor.execute(query,parameter)
 		rows = cursor.fetchall()
 		return(rows)
 	except Exception as e:
 		return({'error':str(e)})
 
-def executeSQL(query):
+def executeSQL(query, parameter):
 	try:
-		cursor.execute(query)
+		cursor.execute(query, parameter)
 		conn.commit()
-		return({'StatusCode': '200', 'query': query})
+		return({'StatusCode': '200', 'query': query%parameter})
 	except Exception as e:
 		return({'error':str(e)})
 
 class myboardAPI(Resource):
 	def get(self):
-		return(selectSQL("SELECT type, selector_json from myboard.api"))
+		query = "SELECT * from myboard.api"
+		return(selectSQL(query))
 	def post(self):
 		try:
 			#parsing
@@ -51,10 +52,12 @@ class myboardAPI(Resource):
 			_apiBody = jsondata['body_selector']
 			_apiSegments = jsondata['segments']
 			_apiType = jsondata['type']
-
 			#SQL
-			query = "INSERT INTO myboard.api (id, type, selector_json) VALUES (null, %s,%s)", (_apiType, jsondata)
-			return(insertSQL(query))
+			#INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES	(null, 1, "qwe", "cap", "qq", "qwe", "zz", "{\"selector\":\"a > span:nth-child(1)\",\"name\":\"rank\"}", now())
+			query = "INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES (null, %s, %s, %s, %s, %s, %s, %s, now())"
+
+			# query = """INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES	(null, 1, "qwe", "cap", "qq", "qwe", "zz", "{\"selector\":\"a > span:nth-child(1)\",\"name\":\"rank\"}", now())"""
+			return(executeSQL(query, (1, "name", "caption", "??", _apiType, _apiUrl, json.dumps(jsondata))))
 		except Exception as e:
 			return({'error':str(e)})
 	def put(self):
@@ -65,9 +68,17 @@ class myboardAPI(Resource):
 		return(executeSQL(query))
 
 class inspectorAPI(Resource):
-	def post(self):
-		inputjson = """{"url":"http://www.naver.com",type":"static","body_selector":"html > body > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div > ul > li","segments":[{"selector":"a > span:nth-child(1)","name":"rank"},{"selector":"a > span:nth-child(2)","name":"name"}]}"""
-		return(inspector(inputjson))
+	def get(self):
+		user_id = request.args.get("user_id")
+		name = request.args.get("api_name")
+		print(user_id)
+		print(name)
+		query = "SELECT api_json FROM myboard.api WHERE name=%s and user_id=%s"
+		getjson = selectSQL(query,(name,user_id))
+		print(json.loads(str(getjson[0][0])))
+		# jsondata = request.get_json(force=True)
+		# jsondata = """{"url":"http://www.naver.com",type":"static","body_selector":"html > body > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div > ul > li","segments":[{"selector":"a > span:nth-child(1)","name":"rank"},{"selector":"a > span:nth-child(2)","name":"name"}]}"""
+		return(inspector(str(getjson[0][0])))
 
 class widgetAPI(Resource):
 	def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
@@ -94,7 +105,6 @@ class dashboardAPI(Resource):
 		query = ""
 		return(executeSQL(query))
 
-
 api.add_resource(myboardAPI, '/myboardapi')
 api.add_resource(inspectorAPI, '/inspectorapi')
 api.add_resource(widgetAPI, '/widgetapi')
@@ -102,11 +112,10 @@ api.add_resource(dashboardAPI, '/dashboardapi')
 
 if __name__ == '__main__':
 	#MySQL configurations
-	app.config['MYSQL_DATABASE_USER'] = 'root'
-	app.config['MYSQL_DATABASE_PASSWORD'] = '1234'
-	app.config['MYSQL_DATABASE_DB'] = 'myboard'
-	app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
-	
+	# app.config['MYSQL_DATABASE_USER'] = 'root'
+	# app.config['MYSQL_DATABASE_PASSWORD'] = '1234'
+	# app.config['MYSQL_DATABASE_DB'] = 'myboard'
+	# app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
 	app.config.from_object(__name__)
 	app.config.from_envvar('MYBOARD_SETTINGS', silent=True)
 	mysql.init_app(app)
