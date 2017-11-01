@@ -21,14 +21,14 @@ def inspector(inputjson):
 	for i in range(len(data["segments"])):
 		rst.append(body.find_element_by_css_selector(data["segments"][i]['selector']).text)
 	driver.close()
-	print(rst)
 	return(rst)
 
-def selectSQL(query, parameter): #return
+def selectSQL(query): #return
 	try:
-		cursor.execute(query,parameter)
-		rows = cursor.fetchall()
-		return(rows)
+		cursor.execute(query)
+		columns = cursor.description 
+		result = [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
+		return(result)
 	except Exception as e:
 		return({'error':str(e)})
 
@@ -42,42 +42,49 @@ def executeSQL(query, parameter):
 
 class myboardAPI(Resource):
 	def get(self):
-		query = "SELECT * from myboard.api"
+		query = "SELECT user_id,name,caption,description,type,url,api_json from myboard.api"
 		return(selectSQL(query))
 	def post(self):
 		try:
 			#parsing
 			jsondata = request.get_json(force=True)
-			_apiUrl = jsondata['url']
-			_apiBody = jsondata['body_selector']
-			_apiSegments = jsondata['segments']
+			_apiUser_id = jsondata['user_id']
+			_apiName = jsondata['name']
+			_apiCaption = jsondata['caption']
+			_apiDescription = jsondata['description']
 			_apiType = jsondata['type']
-			#SQL
-			#INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES	(null, 1, "qwe", "cap", "qq", "qwe", "zz", "{\"selector\":\"a > span:nth-child(1)\",\"name\":\"rank\"}", now())
+			_apiApi_json = jsondata['api_json']
+			_apiUrl = jsondata['url']
 			query = "INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES (null, %s, %s, %s, %s, %s, %s, %s, now())"
-
-			# query = """INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES	(null, 1, "qwe", "cap", "qq", "qwe", "zz", "{\"selector\":\"a > span:nth-child(1)\",\"name\":\"rank\"}", now())"""
-			return(executeSQL(query, (1, "name", "caption", "??", _apiType, _apiUrl, json.dumps(jsondata))))
+			return(executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json)))
 		except Exception as e:
 			return({'error':str(e)})
 	def put(self):
-		query = "UPDATE myboard.api SET type = \"ok\" WHERE id = 1"
-		return(executeSQL(query))
+		jsondata = request.get_json(force=True)
+		_apiChange_name = jsondata['change_name']
+		_apiCaption = jsondata['caption']
+		_apiDescription = jsondata['description']
+		_apiType = jsondata['type']
+		_apiUrl = jsondata['url']
+		_apiApi_json = jsondata['api_json']
+		_apiUser_id = jsondata['user_id']
+		_apiName = jsondata['name']
+
+		query = "UPDATE myboard.api SET name = %s, caption = %s, description = %s, type = %s, url = %s, api_json = %s, created_time = now()  WHERE user_id = %s and name = %s"
+		return(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiUser_id,_apiName )))
 	def delete(self):
-		query = "DELETE FROM myboard.api WHERE id = 1"
-		return(executeSQL(query))
+		jsondata = request.get_json(force=True)
+		_apiUser_id = jsondata['user_id']
+		_apiName = jsondata['name']
+		query = "DELETE FROM myboard.api WHERE user_id = %s and name = %s"
+		return(executeSQL(query, (_apiUser_id,_apiName)))
 
 class inspectorAPI(Resource):
-	def get(self):
-		user_id = request.args.get("user_id")
-		name = request.args.get("api_name")
-		print(user_id)
-		print(name)
+	def get(self, user, api):
+		user_id = user
+		name = api
 		query = "SELECT api_json FROM myboard.api WHERE name=%s and user_id=%s"
 		getjson = selectSQL(query,(name,user_id))
-		print(json.loads(str(getjson[0][0])))
-		# jsondata = request.get_json(force=True)
-		# jsondata = """{"url":"http://www.naver.com",type":"static","body_selector":"html > body > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div > ul > li","segments":[{"selector":"a > span:nth-child(1)","name":"rank"},{"selector":"a > span:nth-child(2)","name":"name"}]}"""
 		return(inspector(str(getjson[0][0])))
 
 class widgetAPI(Resource):
@@ -106,16 +113,11 @@ class dashboardAPI(Resource):
 		return(executeSQL(query))
 
 api.add_resource(myboardAPI, '/myboardapi')
-api.add_resource(inspectorAPI, '/inspectorapi')
+api.add_resource(inspectorAPI, '/inspectorapi/<user>/<api>')
 api.add_resource(widgetAPI, '/widgetapi')
 api.add_resource(dashboardAPI, '/dashboardapi')
 
 if __name__ == '__main__':
-	#MySQL configurations
-	# app.config['MYSQL_DATABASE_USER'] = 'root'
-	# app.config['MYSQL_DATABASE_PASSWORD'] = '1234'
-	# app.config['MYSQL_DATABASE_DB'] = 'myboard'
-	# app.config['MYSQL_DATABASE_HOST'] = '127.0.0.1'
 	app.config.from_object(__name__)
 	app.config.from_envvar('MYBOARD_SETTINGS', silent=True)
 	mysql.init_app(app)

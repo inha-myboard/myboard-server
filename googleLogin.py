@@ -4,6 +4,7 @@ import httplib2
 from apiclient import discovery
 from oauth2client import client
 app = flask.Flask(__name__)
+
 @app.route('/')
 def index():
   if 'credentials' not in flask.session:
@@ -13,16 +14,18 @@ def index():
     return(flask.redirect(flask.url_for('oauth2callback')))
   else:
     http_auth = credentials.authorize(httplib2.Http())
-    drive = discovery.build('drive', 'v2', http_auth)
-    files = drive.files().list().execute()
-    return(json.dumps(files))
+    # drive = discovery.build('drive', 'v2', http_auth)
+    # files = drive.files().list().execute()
+    # return(json.dumps(files))
+    return(flask.redirect(flask.url_for('dashboard.html')))
 
 @app.route('/oauth2callback/')
 def oauth2callback():
   #print(flask.url_for('oauth2callback', _external=True))
   flow = client.flow_from_clientsecrets(
       filename='./client_secrets.json',
-      scope='https://www.googleapis.com/auth/drive.metadata.readonly',
+      # scope='https://www.googleapis.com/auth/drive.metadata.readonly',
+      scope = 'email',
       redirect_uri=flask.url_for('oauth2callback', _external=True))
   if 'code' not in flask.request.args:
     auth_uri = flow.step1_get_authorize_url()
@@ -30,7 +33,12 @@ def oauth2callback():
   else:
     auth_code = flask.request.args.get('code')
     credentials = flow.step2_exchange(auth_code)
-    flask.session['credentials'] = credentials.to_json()
+    flask.session['credentials'] =  credentials.to_json()
+    #DB insert
+    googleInfo = json.loads(flask.session['credentials'])
+    print(googleInfo['access_token'])
+    print(googleInfo['id_token']['email'])
+    
     return(flask.redirect(flask.url_for('index')))
 
 if __name__ == '__main__':
