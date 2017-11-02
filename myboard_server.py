@@ -53,12 +53,19 @@ def oauth2callback():
     auth_code = flask.request.args.get('code')
     credentials = flow.step2_exchange(auth_code)
     flask.session['credentials'] =  credentials.to_json()
+    
     #DB insert
     googleInfo = json.loads(flask.session['credentials'])
-    print(googleInfo['access_token'])
-    print(googleInfo['id_token']['email'])
-    
-    return(flask.redirect(flask.url_for('index')))
+    # print(googleInfo['access_token'])
+    # print(googleInfo['id_token']['email'])
+    try:
+      #같은 이메일이 없으면! 인설트.라는걸 체크해줘야하는데 안해줘도 무방?? -> 기능상 문제는 ㄴ 로그인하면 회원에 또 생김.
+      query = "INSERT INTO myboard.user (id,email,nickname,access_token) values (null, %s,%s,%s)"
+      cursor.execute(query, (googleInfo['id_token']['email'], "뭔 닉넴임?일단 em`ail @앞부분으로 ㄱ?",googleInfo['access_token']))
+      conn.commit()
+      return(flask.redirect(flask.url_for('index')))
+    except Exception as e:
+      return({'error':str(e)})
 
 @app.route('/dashboard')
 def dashboard():
@@ -71,7 +78,7 @@ def test(name = None):
 
 #################APIAPIAPIAPIAPIAPIAPIAPIA#########################
 def inspector(inputjson):
-  driver = webdriver.PhantomJS('./PhantomJS.exe')
+  driver = webdriver.PhantomJS('./PhantomJS')
   data = json.loads(inputjson)
   driver.get(data["url"])
   body = driver.find_element_by_css_selector(data['body_selector'])
@@ -149,26 +156,35 @@ class widgetAPI(Resource):
   def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
     query = ""
     return(executeSQL(query))
-  def post(self): #insert
+  def post(self): #insert 사용자가 위젯을 등록. 현재 DB구조로는 컴포넌트 먼저 등록하고 위젯 등록.
     query = ""
     return(insertSQL(query))
   def put(self): #update
     query = ""
     return(executeSQL(query))
-  def delete(self):
+  def delete(self): # 사용자가 dashboard에 등록한 위젯을 삭제하는과정. (widget_pos, favorite, widget에서 다 삭제되야함.)
     query = ""
     return(executeSQL(query))
 
 class dashboardAPI(Resource):
   def get(self): #dashboard list
-    query = ""
-    return(executeSQL(query))
+    jsondata = request.get_json(force=True)
+    _User_id = jsondata['user_id']
+    query = "SELECT name, order_index FROM myboard.dashboard WHERE user_id=%s"
+    return(executeSQL(query, (_User_id)))
   def post(self): #insert
-    query = ""
-    return(insertSQL(query))
+    jsondata = request.get_json(force=True)
+    _User_id = jsondata['user_id']
+    _dashboardName = jsondata['name']
+    _order_index = jsondata['index']
+    query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
+    return(insertSQL(query, (_User_id, _dashboardName, _order_index)))
   def delete(self): #del
-    query = ""
-    return(executeSQL(query))
+    jsondata = request.get_json(force=True)
+    _User_id = jsondata['user_id']
+    _dashboardName = jsondata['name']
+    query = "DELETE FROM myboard.dashboard WHERE user_id = %s and name = %s"
+    return(executeSQL(query, (_User_id, _dashboardName)))
 
 api.add_resource(myboardAPI, '/myboardapi')
 api.add_resource(inspectorAPI, '/inspectorapi/<user>/<api>')
