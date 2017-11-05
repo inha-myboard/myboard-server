@@ -77,14 +77,61 @@ def test(name = None):
 
 
 #################APIAPIAPIAPIAPIAPIAPIAPIA#########################
+# def inspector(inputjson):
+#   driver = webdriver.PhantomJS('./PhantomJS')
+#   data = json.loads(inputjson)
+#   driver.get(data["url"])
+#   body = driver.find_element_by_css_selector(data['body_selector'])
+#   rst = list()
+#   for i in range(len(data["segments"])):
+#     rst.append(body.find_element_by_css_selector(data["segments"][i]['selector']).text)
+#   driver.close()
+#   return(rst)
+
 def inspector(inputjson):
   driver = webdriver.PhantomJS('./PhantomJS')
-  data = json.loads(inputjson)
+  # data = json.loads(inputjson)
+  data = {"url":"http://cse.inha.ac.kr/","type":"static","body_selector":"html > body > form > div:nth-child(3) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > ul > li","segments":[{"selector":"a","name":"segment0"},{"selector":"span","name":"segment1"}]}
   driver.get(data["url"])
-  body = driver.find_element_by_css_selector(data['body_selector'])
-  rst = list()
-  for i in range(len(data["segments"])):
-    rst.append(body.find_element_by_css_selector(data["segments"][i]['selector']).text)
+  rst = dict()
+  rst['img'] = list()
+  rst['text'] = list()
+
+  if type(data['body_selector']) == str: #1개가 넘어오면..
+    temp = data['body_selector']
+    data['body_selector'] = list()
+    data['body_selector'].append(temp)
+
+  for i in range(len(data['body_selector'])):
+    body = driver.find_element_by_css_selector(data['body_selector'][i])
+    for j in range(len(data["segments"])):
+      if data["segments"][j]['selector'].split(' ')[-1][0:3] == 'img':
+        print('img')
+        href = ''
+        src = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
+        try: #seg에서 맨 마지막 parent가 a라면
+          if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
+            href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).href
+        except: # seg에서 parent tag가 없다면
+          if data['body_selector'][i].split(' ')[-1][0] == 'a':
+            href = body.get_attribute('href')
+        rst['img'].append({'href':href,'src':src})
+      elif data["segments"][j]['selector'].split(' ')[-1][0] == 'a':
+        print('a')
+        href = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
+        text = body.find_element_by_css_selector(data["segments"][j]['selector']).text
+        rst['text'].append({'href':href,'text':text})
+      else:
+        print('etc.')
+        href = ''
+        text = body.find_element_by_css_selector(data["segments"][j]['selector']).text
+        try: #seg에서 맨 마지막 parent가 a라면
+          if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
+            href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).get_attribute('href')
+        except: # seg에서 parent tag가 없다면
+          if data['body_selector'][i].split(' ')[-1][0] == 'a':
+            href = body.get_attribute('href')
+        rst['text'].append({'href':href,'text':text})
   driver.close()
   return(rst)
 
