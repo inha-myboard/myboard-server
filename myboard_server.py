@@ -77,61 +77,58 @@ def test(name = None):
 
 
 #################APIAPIAPIAPIAPIAPIAPIAPIA#########################
-# def inspector(inputjson):
-#   driver = webdriver.PhantomJS('./PhantomJS')
-#   data = json.loads(inputjson)
-#   driver.get(data["url"])
-#   body = driver.find_element_by_css_selector(data['body_selector'])
-#   rst = list()
-#   for i in range(len(data["segments"])):
-#     rst.append(body.find_element_by_css_selector(data["segments"][i]['selector']).text)
-#   driver.close()
-#   return(rst)
 
 def inspector(inputjson):
   driver = webdriver.PhantomJS('./PhantomJS')
-  # data = json.loads(inputjson)
-  data = {"url":"http://cse.inha.ac.kr/","type":"static","body_selector":"html > body > form > div:nth-child(3) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > ul > li","segments":[{"selector":"a","name":"segment0"},{"selector":"span","name":"segment1"}]}
+  data = json.loads(inputjson.replace('\'','"'))#json or str to dict
+
   driver.get(data["url"])
-  rst = dict()
-  rst['img'] = list()
-  rst['text'] = list()
+  ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
+  driver.refresh()
+  ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
+  rst = list()
 
-  if type(data['body_selector']) == str: #1개가 넘어오면..
-    temp = data['body_selector']
-    data['body_selector'] = list()
-    data['body_selector'].append(temp)
-
-  for i in range(len(data['body_selector'])):
-    body = driver.find_element_by_css_selector(data['body_selector'][i])
+  bodyPath = data['body_selector']
+  while 1:
+    obj = dict()
+    try:
+      body = driver.find_element_by_css_selector(bodyPath)
+    except:
+      break
     for j in range(len(data["segments"])):
+      temp = dict()
       if data["segments"][j]['selector'].split(' ')[-1][0:3] == 'img':
-        print('img')
-        href = ''
-        src = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
+        try:
+          temp['src'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
+        except:
+          pass
         try: #seg에서 맨 마지막 parent가 a라면
           if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
             href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).href
+            temp['href'] = href
         except: # seg에서 parent tag가 없다면
-          if data['body_selector'][i].split(' ')[-1][0] == 'a':
-            href = body.get_attribute('href')
-        rst['img'].append({'href':href,'src':src})
+          pass
+          # if data['body_selector'][i].split(' ')[-1][0] == 'a':
+          #   href = body.get_attribute('href')
+        obj[data["segments"][j]['name']] = temp
       elif data["segments"][j]['selector'].split(' ')[-1][0] == 'a':
-        print('a')
-        href = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
-        text = body.find_element_by_css_selector(data["segments"][j]['selector']).text
-        rst['text'].append({'href':href,'text':text})
+        temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
+        temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).text
+        obj[data["segments"][j]['name']] = temp
       else:
-        print('etc.')
-        href = ''
-        text = body.find_element_by_css_selector(data["segments"][j]['selector']).text
+        # text = body.find_element_by_css_selector(data["segments"][j]['selector']).text
+        temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).text
         try: #seg에서 맨 마지막 parent가 a라면
           if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
             href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).get_attribute('href')
+            temp['href'] = href
         except: # seg에서 parent tag가 없다면
-          if data['body_selector'][i].split(' ')[-1][0] == 'a':
+          if data['body_selector'].split(' ')[-1][0] == 'a':
             href = body.get_attribute('href')
-        rst['text'].append({'href':href,'text':text})
+            temp['href'] = href
+        obj[data["segments"][j]['name']] = temp
+    rst.append(obj)
+    bodyPath = bodyPath + ' + ' + body.tag_name
   driver.close()
   return(rst)
 
@@ -154,7 +151,7 @@ def executeSQL(query, parameter):
 
 class myboardAPI(Resource):
   def get(self):
-    query = "SELECT user_id,name,caption,description,type,url,api_json from myboard.api"
+    query = "SELECT id,user_id,name,caption,description,type,url,api_json from myboard.api"
     return(selectSQL(query))
   def post(self):
     try:
@@ -172,24 +169,27 @@ class myboardAPI(Resource):
     except Exception as e:
       return({'error':str(e)})
   def put(self):
-    jsondata = request.get_json(force=True)
-    _apiChange_name = jsondata['change_name']
-    _apiCaption = jsondata['caption']
-    _apiDescription = jsondata['description']
-    _apiType = jsondata['type']
-    _apiUrl = jsondata['url']
-    _apiApi_json = jsondata['api_json']
-    _apiUser_id = jsondata['user_id']
-    _apiName = jsondata['name']
-
-    query = "UPDATE myboard.api SET name = %s, caption = %s, description = %s, type = %s, url = %s, api_json = %s, created_time = now()  WHERE user_id = %s and name = %s"
-    return(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiUser_id,_apiName )))
+    try:
+      jsondata = request.get_json(force=True)
+      _apiId = jsondata['id']
+      _apiChange_name = jsondata['change_name']
+      _apiCaption = jsondata['caption']
+      _apiDescription = jsondata['description']
+      _apiType = jsondata['type']
+      _apiUrl = jsondata['url']
+      _apiApi_json = jsondata['api_json']
+      _apiUser_id = jsondata['user_id']
+      # _apiName = jsondata['name']
+      query = "UPDATE myboard.api SET name = %s, caption = %s, description = %s, type = %s, url = %s, api_json = %s, created_time = now()  WHERE user_id = %s and id = %s"
+      return(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiUser_id,_apiId )))
+    except Exception as e:
+      return({'error':str(e)})
   def delete(self):
     jsondata = request.get_json(force=True)
     _apiUser_id = jsondata['user_id']
-    _apiName = jsondata['name']
-    query = "DELETE FROM myboard.api WHERE user_id = %s and name = %s"
-    return(executeSQL(query, (_apiUser_id,_apiName)))
+    _apiId = jsondata['id']
+    query = "DELETE FROM myboard.api WHERE user_id = %s and id = %s"
+    return(executeSQL(query, (_apiUser_id,_apiId)))
 
 class inspectorAPI(Resource):
   def get(self, user, api):
@@ -201,42 +201,80 @@ class inspectorAPI(Resource):
 
 class widgetAPI(Resource):
   def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
-    query = ""
-    return(executeSQL(query))
+    query = "SELECT id,api_id,user_id,caption,description,mapping_json,created_time from myboard.widget"
+    return(selectSQL(query))
   def post(self): #insert 사용자가 위젯을 등록. 현재 DB구조로는 컴포넌트 먼저 등록하고 위젯 등록.
-    query = ""
-    return(insertSQL(query))
+    try:
+      #parsing
+      jsondata = request.get_json(force=True)
+      _apiApi_id = jsondata['api_id']
+      _apiUser_id = jsondata['user_id']
+      _apiCaption = jsondata['caption']
+      _apiDescription = jsondata['description']
+      _apiMapping_json = jsondata['mapping_json']
+      query = "INSERT INTO myboard.widget (id,api_id,user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, now())"
+      return(executeSQL(query, ( _apiApi_id, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json)))
+    except Exception as e:
+      return({'error':str(e)})
   def put(self): #update
-    query = ""
-    return(executeSQL(query))
+    try:
+     jsondata = request.get_json(force=True)
+      _apiId = jsondata['id']
+      _apiApi_id = jsondata['api_id']
+      _apiUser_id = jsondata['user_id']
+      _apiCaption = jsondata['caption']
+      _apiDescription = jsondata['description']
+      _apiMapping_json = jsondata['mapping_json']
+      query = "UPDATE myboard.widget SET api_id = %s,user_id = %s,caption = %s,description = %s,mapping_json = %s, created_time = now()  WHERE user_id = %s and id = %s"
+      return(executeSQL(query, (_apiApi_id,_apiUser_id,_apiCaption,_apiDescription,_apiMapping_json,_apiUser_id,_apiId )))
+    except Exception as e:
+      return({'error':str(e)})
   def delete(self): # 사용자가 dashboard에 등록한 위젯을 삭제하는과정. (widget_pos, favorite, widget에서 다 삭제되야함.)
-    query = ""
-    return(executeSQL(query))
+    jsondata = request.get_json(force=True)
+    _apiUser_id = jsondata['user_id']
+    _apiId = jsondata['id']
+    query = "DELETE FROM myboard.api WHERE user_id = %s and id = %s"
+    return(executeSQL(query, (_apiUser_id,_apiId)))
 
 class dashboardAPI(Resource):
   def get(self): #dashboard list
     jsondata = request.get_json(force=True)
-    _User_id = jsondata['user_id']
-    query = "SELECT name, order_index FROM myboard.dashboard WHERE user_id=%s"
-    return(executeSQL(query, (_User_id)))
+    _apiUser_id = jsondata['user_id']
+    # _apiId = jsondata['id']
+    query = "SELECT id, name, order_index FROM myboard.dashboard WHERE user_id=%s"
+    return(executeSQL(query, (_apiUser_id)))
   def post(self): #insert
-    jsondata = request.get_json(force=True)
-    _User_id = jsondata['user_id']
-    _dashboardName = jsondata['name']
-    _order_index = jsondata['index']
-    query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-    return(insertSQL(query, (_User_id, _dashboardName, _order_index)))
+    try:
+      jsondata = request.get_json(force=True)
+      _User_id = jsondata['user_id']
+      _dashboardName = jsondata['name']
+      _order_index = jsondata['index']
+      query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
+      return(insertSQL(query, (_User_id, _dashboardName, _order_index)))
+    except Exception as e:
+      return({'error':str(e)})
+  def put(self):
+    try:
+      jsondata = request.get_json(force=True)
+      _apiId = jsondata['id']
+      _apiUser_id = jsondata['user_id']
+      _apidashboardName = jsondata['name']
+      _apiorder_index = jsondata['index']
+      query = "UPDATE myboard.dashboard SET _apidashboardName = %s,_apiorder_index = %s WHERE user_id = %s and id = %s"
+      return(executeSQL(query, (_apidashboardName,_apiorder_index,_apiUser_id,_apiId )))
+    except Exception as e:
+      return({'error':str(e)})
   def delete(self): #del
     jsondata = request.get_json(force=True)
-    _User_id = jsondata['user_id']
-    _dashboardName = jsondata['name']
-    query = "DELETE FROM myboard.dashboard WHERE user_id = %s and name = %s"
-    return(executeSQL(query, (_User_id, _dashboardName)))
+    _apiId = jsondata['id']
+    _apiUser_id = jsondata['user_id']
+    query = "DELETE FROM myboard.dashboard WHERE user_id = %s and id = %s"
+    return(executeSQL(query, (_apiUser_id, _apiId)))
 
-api.add_resource(myboardAPI, '/myboardapi')
-api.add_resource(inspectorAPI, '/inspectorapi/<user>/<api>')
-api.add_resource(widgetAPI, '/widgetapi')
-api.add_resource(dashboardAPI, '/dashboardapi')
+api.add_resource(myboardAPI, '/apis')
+api.add_resource(inspectorAPI, '/inspects/<user>/<api>')
+api.add_resource(widgetAPI, '/widgets')
+api.add_resource(dashboardAPI, '/dashboards')
 
 if __name__ == '__main__':
   #MySQL configurations

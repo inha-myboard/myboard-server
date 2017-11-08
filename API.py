@@ -13,7 +13,7 @@ api = Api(app)
 mysql = MySQL()
 
 def inspector(inputjson):
-	driver = webdriver.PhantomJS('./PhantomJS.exe')
+	driver = webdriver.PhantomJS('./PhantomJS')
 	data = json.loads(inputjson)
 	driver.get(data["url"])
 	body = driver.find_element_by_css_selector(data['body_selector'])
