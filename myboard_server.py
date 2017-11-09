@@ -1,4 +1,4 @@
-#2017.10.05
+﻿#2017.10.05
 #merge main.py, googleLogin.py
 
 #flask
@@ -14,7 +14,6 @@ from apiclient import discovery
 from oauth2client import client
 # import API
 
-#
 from selenium import webdriver
 import time, re
 from flask_restful import Resource, Api
