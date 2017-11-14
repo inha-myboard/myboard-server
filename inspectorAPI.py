@@ -9,25 +9,21 @@ mysql = MySQL()
 app = flask.Flask(__name__)
 
 def inspector(inputjson):
-	# driver = webdriver.PhantomJS('./PhantomJS')
 	data = json.loads(inputjson.replace('\'','"'))#json or str to dict
-
 	driver.get(data["url"])
 	ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
-	driver.refresh()
-	ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
+	# driver.refresh()
+	# ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
 	rst = list()
-
 	bodyPath = data['body_selector']
-	while 1:
+	bodys = driver.find_elements_by_css_selector(bodyPath)
+	
+	for body in bodys:
 		obj = dict()
-		try:
-			body = driver.find_element_by_css_selector(bodyPath)
-		except:
-			break
 		for j in range(len(data["segments"])):
 			temp = dict()
 			if data["segments"][j]['selector'].split(' ')[-1][0:3] == 'img':
+				temp['type'] = 'img'
 				try:
 					temp['src'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
 				except:
@@ -38,16 +34,15 @@ def inspector(inputjson):
 						temp['href'] = href
 				except: # seg에서 parent tag가 없다면
 					pass
-					# if data['body_selector'][i].split(' ')[-1][0] == 'a':
-					# 	href = body.get_attribute('href')
 				obj[data["segments"][j]['name']] = temp
 			elif data["segments"][j]['selector'].split(' ')[-1][0] == 'a':
+				temp['type'] = 'text'
 				temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
-				temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).text
+				temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
 				obj[data["segments"][j]['name']] = temp
 			else:
-				# text = body.find_element_by_css_selector(data["segments"][j]['selector']).text
-				temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).text
+				temp['type'] = 'text'
+				temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
 				try: #seg에서 맨 마지막 parent가 a라면
 					if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
 						href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).get_attribute('href')
@@ -56,11 +51,10 @@ def inspector(inputjson):
 					if data['body_selector'].split(' ')[-1][0] == 'a':
 						href = body.get_attribute('href')
 						temp['href'] = href
-				obj[data["segments"][j]['name']] = temp
+			obj[data["segments"][j]['name']] = temp
+			# print(temp)
 		rst.append(obj)
-		bodyPath = bodyPath + ' + ' + body.tag_name
-	# driver.close()
-	return(rst[0])
+	return(rst)
 
 def selectSQL(query): #return
   try:
