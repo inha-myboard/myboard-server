@@ -219,10 +219,11 @@ class widgetAPI(Resource):
         return(executeSQL(query, (_apiApi_id,_apiUser_id,_apiCaption,_apiDescription,_apiMapping_json,_apiId )))
     except Exception as e:
         return({'error':str(e)})
-    def delete(self, widgetID): # 사용자가 dashboard에 등록한 위젯을 삭제하는과정. (widget_pos, favorite, widget에서 다 삭제되야함.)
-        _apiId = widgetID
-        query = "DELETE FROM myboard.api WHERE id = %s"
-        return(executeSQL(query, (_apiId)))
+  def delete(self, widgetID):
+      _apiId = widgetID
+      query = "DELETE FROM myboard.widget WHERE id = %s"
+      return(executeSQL(query, (_apiId)))
+
 class widgetAPIList(Resource):
   def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
     query = "SELECT id,api_id,user_id,caption,description,mapping_json from myboard.widget"
@@ -241,30 +242,46 @@ class widgetAPIList(Resource):
       return({'error':str(e)})
 
 ###################### DASHBOARD API ######################
+class dashboardAPIList(Resource):
+    def get(self, userId): #dashboard list
+        _apiUser_id = userId
+        query = "SELECT id, name, order_index FROM myboard.dashboard WHERE user_id=%s" % _apiUser_id
+        return(selectSQL(query))
+    def post(self, userId): #insert
+        try:
+          jsondata = request.get_json(force=True)
+          _User_id = userId
+          _dashboardName = jsondata['name']
+          _order_index = jsondata['index']
+          query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
+          return(executeSQL(query, (_User_id, _dashboardName, _order_index)))
+        except Exception as e:
+            return({'error':str(e)})
+
 class dashboardAPI(Resource):
     # def get(self, dashId):
     #     _dashId = dashId
-    #     query = "SELECT id, name, order_index FROM myboard.dashboard WHERE id=%s"
-    #     return(executeSQL(query, (_dashId)))
-    def post(self, dashId): #dashboard insert
-        try:
-            jsondata = request.get_json(force=True)
-            _User_id = jsondata['user_id']
-            _dashboardName = jsondata['name']
-            _order_index = jsondata['index']
-            query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-            return(insertSQL(query, (_User_id, _dashboardName, _order_index)))
-        except Exception as e:
-            return({'error':str(e)})
+    #     query = "SELECT id, name, order_index FROM myboard.dashboard WHERE id=%s" % dashId
+    #     return(selectSQL(query))
+    # def post(self, dashId): #dashboard insert
+    #     try:
+    #         jsondata = request.get_json(force=True)
+    #         _dashId = dashId
+    #         _User_id = jsondata['user_id']
+    #         _dashboardName = jsondata['name']
+    #         _order_index = jsondata['index']
+    #         query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
+    #         return(executeSQL(query, (_User_id, _dashboardName, _order_index)))
+    #     except Exception as e:
+    #         return({'error':str(e)})
     def put(self, dashId): # dashboard update
         try:
             jsondata = request.get_json(force=True)
             _dashId = dashId
-            # _apiUser_id = jsondata['user_id']
-            _apidashboardName = jsondata['name']
+            _apidashName = jsondata['name']
             _apiorder_index = jsondata['index']
-            query = "UPDATE myboard.dashboard SET _apidashboardName = %s,_apiorder_index = %s WHERE id = %s"
-            return(executeSQL(query, (_apidashboardName,_apiorder_index,_dashId )))
+            query = "UPDATE myboard.dashboard SET name = %s,order_index = %s WHERE id = %s"
+            return(executeSQL(query, (_apidashName, _apiorder_index, _dashId )))
         except Exception as e:
             return({'error':str(e)})
     def delete(self, dashId): #del
@@ -272,27 +289,11 @@ class dashboardAPI(Resource):
         query = "DELETE FROM myboard.dashboard WHERE id = %s"
         return(executeSQL(query, (_dashId)))
 
-class dashboardAPIList(Resource):
-    def get(self, userId): #dashboard list
-        _apiUser_id = userId
-        query = "SELECT id, name, order_index FROM myboard.dashboard WHERE user_id=%s"
-        return(executeSQL(query, (_apiUser_id)))
-    # def post(self): #insert
-    #     try:
-    #         jsondata = request.get_json(force=True)
-    #         _User_id = jsondata['user_id']
-    #         _dashboardName = jsondata['name']
-    #         _order_index = jsondata['index']
-    #         query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-    #         return(insertSQL(query, (_User_id, _dashboardName, _order_index)))
-    #     except Exception as e:
-    #         return({'error':str(e)})
-
 class dashboardANDWidget(Resource):
     def get(self, dashId):
         _dashId = dashId
-        query = 'SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = %s'
-        return(executeSQL(query, (_dashId)))
+        query = 'SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = %s' % _dashId
+        return(selectSQL(query))
     def post(self, dashId):
         try:
             jsondata = request.get_json(force=True)
@@ -300,7 +301,7 @@ class dashboardANDWidget(Resource):
             # _dashboardName = jsondata['name']
             # _order_index = jsondata['index']
             # query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-            # return(insertSQL(query, (_User_id, _dashboardName, _order_index)))
+            # return(executeSQL(query, (_User_id, _dashboardName, _order_index)))
         except Exception as e:
             return({'error':str(e)})
 
