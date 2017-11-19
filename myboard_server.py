@@ -323,8 +323,13 @@ api.add_resource(dashboardANDWidget, '/dashboards/<dashId>/widgets/') # 대시�
 def prepare():
   #MySQL configurations
   app.config.from_object(__name__)
-  app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
+  try:
+    app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
+  except:
+    app.config.from_pyfile('local.cfg')
   mysql.init_app(app)
+  global conn  
+  global cursor
   conn = mysql.connect()
   cursor = conn.cursor()
   app.secret_key = str(uuid.uuid4())
