@@ -10,7 +10,7 @@ from flaskext.mysql import MySQL
 import json
 import uuid
 import httplib2
-from apiclient import discovery
+from googleapiclient import discovery
 from oauth2client import client
 # import API
 
@@ -337,14 +337,21 @@ api.add_resource(dashboardAPIList, '/users/<userId>/dashboards') # user의 dash 
 api.add_resource(dashboardANDWidget, '/dashboards/<dashId>/widgets/') # 대시보드 위젯리스트 조회, 저장 //get, post
 # SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = ?
 
-if __name__ == '__main__':
-    #MySQL configurations
-    app.config.from_object(__name__)
+def prepare():
+  #MySQL configurations
+  app.config.from_object(__name__)
+  try:
     app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
-    mysql.init_app(app)
-    conn = mysql.connect()
-    cursor = conn.cursor()
+  except:
+    app.config.from_pyfile('local.cfg')
+  mysql.init_app(app)
+  global conn  
+  global cursor
+  conn = mysql.connect()
+  cursor = conn.cursor()
+  app.secret_key = str(uuid.uuid4())
+  app.debug = False
 
-    app.secret_key = str(uuid.uuid4())
-    app.debug = False
-    app.run(host='0.0.0.0')
+if __name__ == '__main__':
+  prepare()
+  app.run(host='0.0.0.0')

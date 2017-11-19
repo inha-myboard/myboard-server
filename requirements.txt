@@ -2,4 +2,7 @@ urllib3==1.22
 Flask==0.11.1
 Flask-MySQL==1.4.0
 google-api-python-client
-apiclient==1.0.3
+flask_restful
+selenium
+requests
+uwsgi
