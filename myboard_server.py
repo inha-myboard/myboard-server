@@ -10,7 +10,7 @@ from flaskext.mysql import MySQL
 import json
 import uuid
 import httplib2
-from apiclient import discovery
+from googleapiclient import discovery
 from oauth2client import client
 # import API
 
