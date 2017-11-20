@@ -139,6 +139,8 @@ def dashboard():
 #     return(rst)
 
 def selectSQL(query): #return
+  conn = mysql.connect()
+  cursor = conn.cursor()
   try:
     cursor.execute(query)
     columns = cursor.description 
@@ -146,14 +148,23 @@ def selectSQL(query): #return
     return(result)
   except Exception as e:
     return({'error':str(e)})
+  finally:
+    cursor.close()
+    conn.close()
+
 
 def executeSQL(query, parameter):
+  conn = mysql.connect()
+  cursor = conn.cursor()
   try:
     cursor.execute(query, parameter)
     conn.commit()
     return({'StatusCode': '200', 'query': query%parameter})
   except Exception as e:
     return({'error':str(e)})
+  finally:
+    cursor.close()
+    conn.close()
 
 ###################### MYBOARD API ######################
 class myboardAPI(Resource):
@@ -226,7 +237,7 @@ class widgetAPI(Resource):
 
 class widgetAPIList(Resource):
   def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
-    query = "SELECT id,api_id,user_id,caption,description,mapping_json from myboard.widget"
+    query = "SELECT w.id,w.caption, user.nickname,w.description,api.url, w.created_time from myboard.widget w inner join api on widget.api_id = api.id inner join user on w.user_id = user.id"
     return(selectSQL(query))
   def post(self): #insert 사용자가 위젯을 등록. 현재 DB구조로는 컴포넌트 먼저 등록하고 위젯 등록.
     try:
@@ -345,10 +356,6 @@ def prepare():
   except:
     app.config.from_pyfile('local.cfg')
   mysql.init_app(app)
-  global conn  
-  global cursor
-  conn = mysql.connect()
-  cursor = conn.cursor()
   app.secret_key = str(uuid.uuid4())
   app.debug = False
 
