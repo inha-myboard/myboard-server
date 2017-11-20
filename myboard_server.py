@@ -237,7 +237,7 @@ class widgetAPI(Resource):
 
 class widgetAPIList(Resource):
   def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
-    query = "SELECT w.id,w.caption, user.nickname,w.description,api.url, w.created_time from myboard.widget w inner join api on widget.api_id = api.id inner join user on w.user_id = user.id"
+    query = "SELECT w.id,w.caption, user.nickname,w.description,api.url, w.created_time from myboard.widget w inner join api on w.api_id = api.id inner join user on w.user_id = user.id"
     return(selectSQL(query))
   def post(self): #insert 사용자가 위젯을 등록. 현재 DB구조로는 컴포넌트 먼저 등록하고 위젯 등록.
     try:
