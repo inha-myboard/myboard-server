@@ -1,10 +1,10 @@
 #2017.10.05
 #merge main.py, googleLogin.py
 
-#flask
 import flask
 from flask import Flask, render_template,jsonify, request
 from flaskext.mysql import MySQL
+from flask_cors import CORS
 
 #google oauth2
 import json
@@ -25,6 +25,7 @@ from flask_restful import reqparse
 app = flask.Flask(__name__, static_folder='assets')
 mysql = MySQL()
 api = Api(app)
+CORS(app)
 
 @app.route('/')
 def index():

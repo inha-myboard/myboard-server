@@ -6,3 +6,4 @@ flask_restful
 selenium
 requests
 uwsgi
+flask_cors
