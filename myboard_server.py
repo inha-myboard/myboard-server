@@ -292,16 +292,33 @@ class dashboardAPI(Resource):
 class dashboardANDWidget(Resource):
     def get(self, dashId):
         _dashId = dashId
+        
+        # SELECT w.*, wp.props_json,api_data.data FROM widget_pos wp inner join widget w on wp.widget_id = w.id inner join api_data on w.api_id = api_data.api_ID; #data까지 한번에 긁어오는거
+        rst = dict()
         query = 'SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = %s' % _dashId
-        return(selectSQL(query))
+        rst['widget'] = selectSQL(query)
+        query = 'SELECT data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_ID where dashboard_id = %s' % _dashId
+        rst['data'] = selectSQL(query)
+        return(json.dumps(rst))
     def post(self, dashId):
         try:
             jsondata = request.get_json(force=True)
-            # _User_id = jsondata['user_id']
-            # _dashboardName = jsondata['name']
-            # _order_index = jsondata['index']
-            # query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-            # return(executeSQL(query, (_User_id, _dashboardName, _order_index)))
+            _apiId= jsondata['api_id'] #widget
+            _apiUser_id= jsondata['user_id'] #widget
+            _apiCaption= jsondata['caption'] #widget
+            _apiDescription= jsondata['description'] #widget
+            _apiMapping_json= jsondata['mapping_json'] #widget
+            
+            # = jsondata['widget_id'] #widgetpos
+            _apiDashId= jsondata['dashboard_id'] #widgetpos
+            _apiPropsJson= jsondata['props_json'] #widgetpos
+
+            # query = "INSERT INTO myboard.widget (id, api_id, user_id, caption, description, mapping_json, created_time) VALUES (null, %s, %s, %s, %s, %s, now())"
+            query = "START TRANSACTION;\
+            INSERT INTO myboard.widget (id, api_id, user_id, caption, description, mapping_json, created_time) VALUES (null, %s, %s, %s, %s, %s, now());\
+            INSERT INTO myboard.widget_pos (id, widget_id, dashboard_id, props_json) value (null, LAST_INSERT_ID(), %s, %s);\
+            COMMIT;"
+            return(executeSQL(query, (_apiId, _User_id, _apiCaption, _apiDescription, _apiMapping_json, _apiDashId, _apiPropsJson)))
         except Exception as e:
             return({'error':str(e)})
 
@@ -323,8 +340,13 @@ api.add_resource(dashboardANDWidget, '/dashboards/<dashId>/widgets/') # 대시�
 def prepare():
   #MySQL configurations
   app.config.from_object(__name__)
-  app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
+  try:
+    app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
+  except:
+    app.config.from_pyfile('local.cfg')
   mysql.init_app(app)
+  global conn  
+  global cursor
   conn = mysql.connect()
   cursor = conn.cursor()
   app.secret_key = str(uuid.uuid4())

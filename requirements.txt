@@ -5,3 +5,4 @@ google-api-python-client
 flask_restful
 selenium
 requests
+uwsgi

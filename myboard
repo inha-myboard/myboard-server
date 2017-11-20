@@ -4,4 +4,5 @@ if [ $# -eq 0 ]
     MYBOARD_ENV=local
 fi
 export MYBOARD_SETTINGS=`pwd`/$MYBOARD_ENV.cfg
-python myboard_server.py
+export PATH=PATH:`pwd`/myboardenv/bin
+uwsgi --ini myboard.ini
