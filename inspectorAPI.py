@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
 	# rst = dict()
 	select = "SELECT id, url, api_json FROM myboard.api;"
-	insert = "INSERT INTO myboard.api_data (id, api_id, data) VALUES (null, %s, %s) ON DUPLICATE KEY UPDATE data=%s"
+	insert = "INSERT INTO myboard.api_data (api_id, data) VALUES (%s, %s) ON DUPLICATE KEY UPDATE data=%s"
 	temp = selectSQL(select)
 	for i in range(len(temp)):
 		sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
