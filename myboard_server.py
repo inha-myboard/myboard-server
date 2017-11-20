@@ -181,17 +181,17 @@ class myboardAPI(Resource):
       _apiUser_id = jsondata['user_id']
       # _apiName = jsondata['name']
       query = "UPDATE myboard.api SET name = %s, caption = %s, description = %s, type = %s, url = %s, api_json = %s, created_time = now()  WHERE id = %s"
-      return(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiId )))
+      return(flask.jsonify(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiId ))))
     except Exception as e:
       return({'error':str(e)})
   def delete(self, apiId):
     _apiId = apiId
     query = "DELETE FROM myboard.api WHERE id = %s"
-    return(executeSQL(query, (_apiId)))
+    return(flask.jsonify(executeSQL(query, (_apiId))))
 class myboardAPIList(Resource):
   def get(self):
     query = "SELECT id,user_id,name,caption,description,type,url,api_json from myboard.api"
-    return(selectSQL(query))
+    return(flask.jsonify(selectSQL(query)))
   def post(self):
     try:
       jsondata = request.get_json(force=True)
@@ -203,7 +203,7 @@ class myboardAPIList(Resource):
       _apiApi_json = jsondata['api_json']
       _apiUrl = jsondata['url']
       query = "INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES (null, %s, %s, %s, %s, %s, %s, %s, now())"
-      return(executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json)))
+      return(flask.jsonify(executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))))
     except Exception as e:
       return({'error':str(e)})
 
@@ -212,7 +212,7 @@ class inspectorAPI(Resource):
     def get(self):
       query = "SELECT api_id, data FROM myboard.api_data;"
       getjson = selectSQL(query)
-      return(getjson)
+      return(flask.jsonify(getjson))
 
 ###################### WIDGET API ######################
 class widgetAPI(Resource):
@@ -227,18 +227,18 @@ class widgetAPI(Resource):
         _apiDescription = jsondata['description']
         _apiMapping_json = jsondata['mapping_json']
         query = "UPDATE myboard.widget SET api_id = %s,user_id = %s,caption = %s,description = %s,mapping_json = %s, created_time = now()  WHERE id = %s"
-        return(executeSQL(query, (_apiApi_id,_apiUser_id,_apiCaption,_apiDescription,_apiMapping_json,_apiId )))
+        return(flask.jsonify(executeSQL(query, (_apiApi_id,_apiUser_id,_apiCaption,_apiDescription,_apiMapping_json,_apiId ))))
     except Exception as e:
         return({'error':str(e)})
   def delete(self, widgetID):
       _apiId = widgetID
       query = "DELETE FROM myboard.widget WHERE id = %s"
-      return(executeSQL(query, (_apiId)))
+      return(flask.jsonify(executeSQL(query, (_apiId))))
 
 class widgetAPIList(Resource):
   def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
     query = "SELECT w.id,w.caption, user.nickname,w.description,api.url, w.created_time from myboard.widget w inner join api on w.api_id = api.id inner join user on w.user_id = user.id"
-    return(selectSQL(query))
+    return(flask.jsonify(selectSQL(query)))
   def post(self): #insert 사용자가 위젯을 등록. 현재 DB구조로는 컴포넌트 먼저 등록하고 위젯 등록.
     try:
       jsondata = request.get_json(force=True)
@@ -248,7 +248,7 @@ class widgetAPIList(Resource):
       _apiDescription = jsondata['description']
       _apiMapping_json = jsondata['mapping_json']
       query = "INSERT INTO myboard.widget (id,api_id,user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, now())"
-      return(executeSQL(query, ( _apiApi_id, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json)))
+      return(flask.jsonify(executeSQL(query, ( _apiApi_id, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json))))
     except Exception as e:
       return({'error':str(e)})
 
@@ -265,7 +265,7 @@ class dashboardAPIList(Resource):
           _dashboardName = jsondata['name']
           _order_index = jsondata['index']
           query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-          return(executeSQL(query, (_User_id, _dashboardName, _order_index)))
+          return(flask.jsonify(executeSQL(query, (_User_id, _dashboardName, _order_index))))
         except Exception as e:
             return({'error':str(e)})
 
@@ -292,13 +292,13 @@ class dashboardAPI(Resource):
             _apidashName = jsondata['name']
             _apiorder_index = jsondata['index']
             query = "UPDATE myboard.dashboard SET name = %s,order_index = %s WHERE id = %s"
-            return(executeSQL(query, (_apidashName, _apiorder_index, _dashId )))
+            return(flask.jsonify(executeSQL(query, (_apidashName, _apiorder_index, _dashId ))))
         except Exception as e:
             return({'error':str(e)})
     def delete(self, dashId): #del
         _dashId = dashId
         query = "DELETE FROM myboard.dashboard WHERE id = %s"
-        return(executeSQL(query, (_dashId)))
+        return(flask.jsonify(executeSQL(query, (_dashId))))
 
 class dashboardANDWidget(Resource):
     def get(self, dashId):
@@ -308,30 +308,29 @@ class dashboardANDWidget(Resource):
         rst = dict()
         query = 'SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = %s' % _dashId
         rst['widget'] = selectSQL(query)
-        query = 'SELECT data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_ID where dashboard_id = %s' % _dashId
+        query = 'SELECT api_id, data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_ID where dashboard_id = %s' % _dashId
         rst['data'] = selectSQL(query)
-        return(json.dumps(rst))
+        return(flask.jsonify(rst))
     def post(self, dashId):
+        conn = mysql.connect()
+        conn.begin()
+        cursor = conn.cursor()
         try:
             jsondata = request.get_json(force=True)
-            _apiId= jsondata['api_id'] #widget
-            _apiUser_id= jsondata['user_id'] #widget
-            _apiCaption= jsondata['caption'] #widget
-            _apiDescription= jsondata['description'] #widget
-            _apiMapping_json= jsondata['mapping_json'] #widget
-            
-            # = jsondata['widget_id'] #widgetpos
-            _apiDashId= jsondata['dashboard_id'] #widgetpos
-            _apiPropsJson= jsondata['props_json'] #widgetpos
+            cursor.execute("DELETE FROM myboard.widget_pos WHERE dashboard_id = %s;", (dashId))
 
-            # query = "INSERT INTO myboard.widget (id, api_id, user_id, caption, description, mapping_json, created_time) VALUES (null, %s, %s, %s, %s, %s, now())"
-            query = "START TRANSACTION;\
-            INSERT INTO myboard.widget (id, api_id, user_id, caption, description, mapping_json, created_time) VALUES (null, %s, %s, %s, %s, %s, now());\
-            INSERT INTO myboard.widget_pos (id, widget_id, dashboard_id, props_json) value (null, LAST_INSERT_ID(), %s, %s);\
-            COMMIT;"
-            return(executeSQL(query, (_apiId, _User_id, _apiCaption, _apiDescription, _apiMapping_json, _apiDashId, _apiPropsJson)))
+            for obj in jsondata:
+                widget_id = obj['widget_id']
+                props_json = obj['props_json']
+                cursor.execute("INSERT INTO myboard.widget_pos (widget_id, dashboard_id, props_json) value (%s, , %s, %s);", (widget_id, dashId, json.dumps(props_json)))
+            conn.commit()
         except Exception as e:
+            conn.rollback()
             return({'error':str(e)})
+        finally:
+            cursor.close()
+            conn.close()
+
 
 api.add_resource(myboardAPI, '/apis/<apiId>')
 api.add_resource(myboardAPIList, '/apis')
