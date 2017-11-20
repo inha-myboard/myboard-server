@@ -99,7 +99,7 @@ if __name__ == '__main__':
 	for i in range(len(temp)):
 		sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
 		sql_id = temp[i]['id']
-		print(executeSQL(insert, (sql_id, sql_data, sql_data)))
+		executeSQL(insert, (sql_id, sql_data, sql_data))
 		# print(sql_id)
 		# print(sql_data)
 			
