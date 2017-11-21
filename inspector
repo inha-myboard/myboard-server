@@ -1,0 +1,8 @@
+export MYBOARD_ENV=$1
+if [ $# -eq 0 ]
+  then
+    MYBOARD_ENV=local
+fi
+export MYBOARD_SETTINGS=`pwd`/$MYBOARD_ENV.cfg
+export PATH=PATH:`pwd`/myboardenv/bin
+python inspectorAPI.py

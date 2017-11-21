@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #2017.10.05
 #merge main.py, googleLogin.py
 
@@ -272,7 +273,7 @@ class widgetAPIList(Resource):
 class dashboardAPIList(Resource):
     def get(self, userId): #dashboard list
         _apiUser_id = userId
-        query = "SELECT id, name, order_index FROM myboard.dashboard WHERE user_id=%s" % _apiUser_id
+        query = "SELECT id, name, icon, order_index FROM myboard.dashboard WHERE user_id=%s" % _apiUser_id
         return(selectSQL(query))
     def post(self, userId): #insert
         try:
@@ -372,11 +373,12 @@ def prepare():
     app.config.from_envvar('MYBOARD_SETTINGS', silent=False)
   except:
     app.config.from_pyfile('local.cfg')
+  global driver
+  driver = webdriver.PhantomJS('./PhantomJS')
   mysql.init_app(app)
   app.secret_key = str(uuid.uuid4())
   app.debug = False
 
 if __name__ == '__main__':
   prepare()
-  driver = webdriver.PhantomJS('./PhantomJS')
   app.run(host='0.0.0.0')
