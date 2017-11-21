@@ -86,59 +86,52 @@ def dashboard():
 #   return(render_template(name+'.html'))
 
 #################UTIL#########################
-# def inspector(inputjson):
-#     driver = webdriver.PhantomJS('./PhantomJS')
-#     data = json.loads(inputjson.replace('\'','"'))#json or str to dict
+def inspector(inputjson):
+  data = json.loads(inputjson.replace('\'','"'))#json or str to dict
+  driver.get(data["url"])
+  ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
 
-#     driver.get(data["url"])
-#     ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
-#     driver.refresh()
-#     ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
-#     rst = list()
-
-#     bodyPath = data['body_selector']
-#     while 1:
-#         obj = dict()
-#         try:
-#             body = driver.find_element_by_css_selector(bodyPath)
-#         except:
-#             break
-#         for j in range(len(data["segments"])):
-#             temp = dict()
-#             if data["segments"][j]['selector'].split(' ')[-1][0:3] == 'img':
-#                 try:
-#                     temp['src'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
-#                 except:
-#                     pass
-#                 try: #seg에서 맨 마지막 parent가 a라면
-#                     if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
-#                         href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).href
-#                         temp['href'] = href
-#                 except: # seg에서 parent tag가 없다면
-#                     pass
-#                     # if data['body_selector'][i].split(' ')[-1][0] == 'a':
-#                     #   href = body.get_attribute('href')
-#                 obj[data["segments"][j]['name']] = temp
-#             elif data["segments"][j]['selector'].split(' ')[-1][0] == 'a':
-#                 temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
-#                 temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).text
-#                 obj[data["segments"][j]['name']] = temp
-#             else:
-#                 # text = body.find_element_by_css_selector(data["segments"][j]['selector']).text
-#                 temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).text
-#                 try: #seg에서 맨 마지막 parent가 a라면
-#                     if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
-#                         href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).get_attribute('href')
-#                         temp['href'] = href
-#                 except: # seg에서 parent tag가 없다면
-#                     if data['body_selector'].split(' ')[-1][0] == 'a':
-#                         href = body.get_attribute('href')
-#                         temp['href'] = href
-#                 obj[data["segments"][j]['name']] = temp
-#         rst.append(obj)
-#         bodyPath = bodyPath + ' + ' + body.tag_name
-#     driver.close()
-#     return(rst)
+  rst = list()
+  bodyPath = data['body_selector']
+  bodys = driver.find_elements_by_css_selector(bodyPath)
+  
+  for body in bodys:
+    obj = dict()
+    for j in range(len(data["segments"])):
+      temp = dict()
+      if data["segments"][j]['selector'].split(' ')[-1][0:3] == 'img':
+        temp['type'] = 'img'
+        try:
+          temp['src'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
+        except:
+          pass
+        try: #seg에서 맨 마지막 parent가 a라면
+          if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
+            href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).href
+            temp['href'] = href
+        except: # seg에서 parent tag가 없다면
+          pass
+        obj[data["segments"][j]['name']] = temp
+      elif data["segments"][j]['selector'].split(' ')[-1][0] == 'a':
+        temp['type'] = 'text'
+        temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
+        temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+        obj[data["segments"][j]['name']] = temp
+      else:
+        temp['type'] = 'text'
+        temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+        try: #seg에서 맨 마지막 parent가 a라면
+          if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
+            href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).get_attribute('href')
+            temp['href'] = href
+        except: # seg에서 parent tag가 없다면
+          if data['body_selector'].split(' ')[-1][0] == 'a':
+            href = body.get_attribute('href')
+            temp['href'] = href
+      obj[data["segments"][j]['name']] = temp
+      # print(temp)
+    rst.append(obj)
+  return(rst)
 
 def selectSQL(query): #return
   conn = mysql.connect()
@@ -205,16 +198,37 @@ class myboardAPIList(Resource):
       _apiApi_json = jsondata['api_json']
       _apiUrl = jsondata['url']
       query = "INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES (null, %s, %s, %s, %s, %s, %s, %s, now())"
-      return(flask.jsonify(executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))))
+      # return(flask.jsonify(executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))))
+      executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))
+      
+      # insert data
+      select = "SELECT id, url, api_json FROM myboard.api;"
+      temp = selectSQL(select)
+      insert = "INSERT INTO myboard.api_data (api_id, data) VALUES (%s, %s) ON DUPLICATE KEY UPDATE data=%s"
+      for i in range(len(temp)):
+        sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
+        sql_id = temp[i]['id']
+        executeSQL(insert, (sql_id, sql_data, sql_data))
+  
     except Exception as e:
       return({'error':str(e)})
 
 ###################### INSPECTOR API ######################
 class inspectorAPI(Resource):
-    def get(self):
-      query = "SELECT api_id, data FROM myboard.api_data;"
-      getjson = selectSQL(query)
-      return(flask.jsonify(getjson))
+    # def get(self):
+    #   query = "SELECT api_id, data FROM myboard.api_data;"
+    #   getjson = selectSQL(query)
+    #   return(flask.jsonify(getjson))
+    def post(self):
+      try:
+        jsondata = request.get_json(force=True)
+        _apiApi_json = jsondata['api_json']
+        # _apiUrl = jsondata['url']
+        preview = inspector(json.dumps(_apiApi_json))
+        return(preview)
+      except Exception as e:
+        return({'error':str(e)})
+
 
 ###################### WIDGET API ######################
 class widgetAPI(Resource):
@@ -364,4 +378,5 @@ def prepare():
 
 if __name__ == '__main__':
   prepare()
+  driver = webdriver.PhantomJS('./PhantomJS')
   app.run(host='0.0.0.0')
