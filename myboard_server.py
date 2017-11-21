@@ -59,8 +59,9 @@ def oauth2callback():
     #DB insert
     googleInfo = json.loads(flask.session['credentials'])
     print(googleInfo)
-    # print(googleInfo['access_token'])
-    # print(googleInfo['id_token']['email'])
+    print(type(googleInfo))
+    print(googleInfo['access_token'])
+    print(googleInfo['id_token']['email'])
     
     reqURL = 'https://www.googleapis.com/plus/v1/people/me'
     headers = {'Authorization': 'Bearer '+googleInfo['access_token']}
@@ -70,8 +71,8 @@ def oauth2callback():
     print(clientInfo['image']['url'])
     try:
       query = "INSERT INTO myboard.user (id,email,nickname,access_token,img) VALUES (null, %s,%s,%s,%s) ON DUPLICATE KEY UPDATE access_token=%s and nickname=%s and img=%s"
-      cursor.execute(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
-      conn.commit()
+      executeSQL(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
+      # cursor.execute(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
       return(flask.redirect(flask.url_for('index')))
     except Exception as e:
       return({'error':str(e)})
@@ -309,8 +310,10 @@ class dashboardANDWidget(Resource):
         rst = dict()
         query = 'SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = %s' % _dashId
         rst['widget'] = selectSQL(query)
-        query = 'SELECT api_id, data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_ID where dashboard_id = %s' % _dashId
+        print(rst['widget'])
+        query = 'SELECT api_data.api_id, data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_ID where dashboard_id = %s' % _dashId
         rst['data'] = selectSQL(query)
+        print(rst['data'])
         return(flask.jsonify(rst))
     def post(self, dashId):
         conn = mysql.connect()
