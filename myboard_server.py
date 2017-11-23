@@ -373,7 +373,7 @@ def prepare():
   except:
     app.config.from_pyfile('local.cfg')
   global driver
-  driver = webdriver.PhantomJS('./PhantomJS')
+  driver = webdriver.PhantomJS('./phantomjs')
   mysql.init_app(app)
   app.secret_key = str(uuid.uuid4())
   app.debug = False
