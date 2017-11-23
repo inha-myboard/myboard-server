@@ -203,14 +203,13 @@ class myboardAPIList(Resource):
       executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))
       
       # insert data
-      select = "SELECT id, url, api_json FROM myboard.api;"
+      select = "SELECT api.id, api_json FROM api LEFT JOIN api_data ON api.id = api_data.api_id WHERE api_data.api_id is NULL;"
       temp = selectSQL(select)
       insert = "INSERT INTO myboard.api_data (api_id, data) VALUES (%s, %s) ON DUPLICATE KEY UPDATE data=%s"
       for i in range(len(temp)):
         sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
         sql_id = temp[i]['id']
-        executeSQL(insert, (sql_id, sql_data, sql_data))
-  
+        executeSQL(insert, (sql_id, sql_data, sql_data))  
     except Exception as e:
       return({'error':str(e)})
 
