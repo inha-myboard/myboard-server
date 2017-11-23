@@ -11,6 +11,10 @@ __pycache__
 *.json
 *.exe
 myboardenv
+ref
+*.log*
+phantom*
+nohup*
 
 # App Env
 *.cfg
