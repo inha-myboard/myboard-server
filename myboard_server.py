@@ -275,7 +275,7 @@ class widgetList(Resource):
     query = "SELECT w.id,w.caption, user.nickname,w.description,api.url, w.created_time from myboard.widget w inner join api on w.api_id = api.id inner join user on w.user_id = user.id"
     if user_id  is  not  None:
       query = query + " WHERE user_id = %s" % user_id
-    return(flask.jsonify(selectSQL(query)))
+    return(flask.jsonify(selectSQL(query, ())))
   def post(self): # 사용자가 위젯을 등록. 현재 구조로 API 먼저 등록하고 위젯 등록.
     try:
       jsondata = request.get_json(force=True)
