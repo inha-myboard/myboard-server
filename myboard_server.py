@@ -129,11 +129,11 @@ def inspect(inputjson):
     rst.append(obj)
   return(rst)
 
-def selectSQL(query):
+def selectSQL(query, parameter):
   conn = mysql.connect()
   cursor = conn.cursor()
   try:
-    cursor.execute(query)
+    cursor.execute(query, parameter)
     columns = cursor.description 
     result = [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
     return(result)
@@ -284,8 +284,8 @@ class widgetList(Resource):
 class userDashboardList(Resource):
     def get(self, userId): #dashboard list
         _apiUser_id = userId
-        query = "SELECT id, name, icon, order_index FROM myboard.dashboard WHERE user_id=%s" % _apiUser_id
-        return(selectSQL(query))
+        query = "SELECT id, name, icon, order_index FROM myboard.dashboard WHERE user_id=%s"
+        return(selectSQL(query, (_apiUser_id)))
     def post(self, userId): #insert
         try:
           jsondata = request.get_json(force=True)
@@ -332,8 +332,8 @@ class dashboardWidgetList(Resource):
     def get(self, dashboardId):
         _dashboardId = dashboardId
         
-        query = 'SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = %s' % _dashboardId
-        rst = selectSQL(query)
+        query = 'SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = %s'
+        rst = selectSQL(query, (_dashboardId))
         return(flask.jsonify(rst))
     def post(self, dashboardId):
         conn = mysql.connect()
@@ -358,8 +358,8 @@ class dashboardWidgetList(Resource):
 class dashboardWidgetData(Resource):
     def get(self, dashboardId):
         _dashboardId = dashboardId
-        query = 'SELECT widget.id, api_data.data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_id where dashboard_id = %s' % _dashboardId
-        rst = selectSQL(query)
+        query = 'SELECT widget.id, api_data.data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_id where dashboard_id = %s'
+        rst = selectSQL(query, (_dashboardId))
         return(flask.jsonify(rst))
 
 
