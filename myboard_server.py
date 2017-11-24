@@ -231,7 +231,10 @@ class widget(Resource):
   def get(self, widgetId): #update
     try:
         query = "SELECT * FROM widget w WHERE w.id = %s"
-        return(flask.jsonify(selectSQL(query, (widgetId))))
+        rst = selectSQL(query, (widgetId))
+        if len(rst) > 0:
+          return(flask.jsonify(rst[0]))
+        return ('', 204)
     except Exception as e:
         return({'error':str(e)})
   def put(self, widgetId): #update
@@ -258,16 +261,22 @@ class widgetData(Resource):
   def get(self, widgetId): #update
     try:
         query = "SELECT ad.* FROM api_data ad INNER JOIN widget w on w.api_id = ad.api_id WHERE w.id = %s"
-        return(flask.jsonify(selectSQL(query, (widgetId))))
+        rst = selectSQL(query, (widgetId))
+        if len(rst) > 0:
+          return(flask.jsonify(rst[0]))
+        return ('', 204)
     except Exception as e:
         return({'error':str(e)})
 
 
 class widgetList(Resource):
   def get(self): #list, search  #뒤에 변수값 있으면 search, null이면 list
+    user_id = request.args.get('user_id', default = None)
     query = "SELECT w.id,w.caption, user.nickname,w.description,api.url, w.created_time from myboard.widget w inner join api on w.api_id = api.id inner join user on w.user_id = user.id"
+    if user_id  is  not  None:
+      query = query + " WHERE user_id = %s" % user_id
     return(flask.jsonify(selectSQL(query)))
-  def post(self): #insert 사용자가 위젯을 등록. 현재 DB구조로는 컴포넌트 먼저 등록하고 위젯 등록.
+  def post(self): # 사용자가 위젯을 등록. 현재 구조로 API 먼저 등록하고 위젯 등록.
     try:
       jsondata = request.get_json(force=True)
       _apiApi_id = jsondata['api_id']
