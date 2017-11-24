@@ -228,6 +228,12 @@ class inspectApi(Resource):
 
 ###################### WIDGET API ######################
 class widget(Resource):
+  def get(self, widgetId): #update
+    try:
+        query = "SELECT * FROM widget w WHERE w.id = %s"
+        return(flask.jsonify(selectSQL(query, (widgetId))))
+    except Exception as e:
+        return({'error':str(e)})
   def put(self, widgetId): #update
     try:
         jsondata = request.get_json(force=True)
@@ -251,7 +257,7 @@ class widget(Resource):
 class widgetData(Resource):
   def get(self, widgetId): #update
     try:
-        query = "SELECT * FROM api_data ad INNER JOIN widget w on w.api_id = ad.api_id WHERE w.id = %s"
+        query = "SELECT ad.* FROM api_data ad INNER JOIN widget w on w.api_id = ad.api_id WHERE w.id = %s"
         return(flask.jsonify(selectSQL(query, (widgetId))))
     except Exception as e:
         return({'error':str(e)})
@@ -352,7 +358,7 @@ class dashboardWidgetList(Resource):
 class dashboardWidgetData(Resource):
     def get(self, dashboardId):
         _dashboardId = dashboardId
-        query = 'SELECT api_data.api_id, data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_id where dashboard_id = %s' % _dashboardId
+        query = 'SELECT widget.id, api_data.data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_id where dashboard_id = %s' % _dashboardId
         rst = selectSQL(query)
         return(flask.jsonify(rst))
 
