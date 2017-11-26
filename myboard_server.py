@@ -284,20 +284,20 @@ class widgetList(Resource):
     user_id = request.args.get('user_id', default = None)
     query = "SELECT w.id,w.caption, user.nickname,w.description,api.url, w.created_time from myboard.widget w inner join api on w.api_id = api.id inner join user on w.user_id = user.id"
     if user_id  is  not  None:
-      query = query + " WHERE user_id = %s" % user_id
+        query = query + " WHERE user_id = %s" % user_id
     return(flask.jsonify(selectSQL(query, ())))
   def post(self): # 사용자가 위젯을 등록. 현재 구조로 API 먼저 등록하고 위젯 등록.
     try:
-      jsondata = request.get_json(force=True)
-      _apiApi_id = jsondata['api_id']
-      _apiUser_id = jsondata['user_id']
-      _apiCaption = jsondata['caption']
-      _apiDescription = jsondata['description']
-      _apiMapping_json = jsondata['mapping_json']
-      query = "INSERT INTO myboard.widget (id,api_id,user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, now())"
-      return(flask.jsonify(executeSQL(query, ( _apiApi_id, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json))))
+        jsondata = request.get_json(force=True)
+        _apiApi_id = jsondata['api_id']
+        _apiUser_id = jsondata['user_id']
+        _apiCaption = jsondata['caption']
+        _apiDescription = jsondata['description']
+        _apiMapping_json = jsondata['mapping_json']
+        query = "INSERT INTO myboard.widget (id,api_id,user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, now())"
+        return(flask.jsonify(executeSQL(query, ( _apiApi_id, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json))))
     except Exception as e:
-      return({'error':str(e)})
+        return({'error':str(e)})
 
 ###################### DASHBOARD API ######################
 class userDashboardList(Resource):
@@ -307,12 +307,23 @@ class userDashboardList(Resource):
         return(selectSQL(query, (_apiUser_id)))
     def post(self, userId): #insert
         try:
-          jsondata = request.get_json(force=True)
-          _user_id = userId
-          _dashboardName = jsondata['name']
-          _order_index = jsondata['index']
-          query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-          return(flask.jsonify(executeSQL(query, (_user_id, _dashboardName, _order_index))))
+            jsondata = request.get_json(force=True)
+            _user_id = userId
+            _dashboardName = jsondata['name']
+            _order_index = jsondata['index']
+            query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
+            return(flask.jsonify(executeSQL(query, (_user_id, _dashboardName, _order_index))))
+        except Exception as e:
+            return({'error':str(e)})
+    def put(self, userId):
+        try:
+            jsondata = request.get_json(force=True)
+            _user_id = userId
+            _dashboardId = jsondata['id']
+            _dashboardName = jsondata['name']
+            _order_index = jsondata['index']
+            query = "UPDATE myboard.dashboard SET name = %s, order_index = %s WHERE id = %s"
+            return(flask.jsonify(executeSQL(query, (_dashboardName, _order_index, _dashboardId))))
         except Exception as e:
             return({'error':str(e)})
 
