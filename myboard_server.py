@@ -270,7 +270,7 @@ class widget(Resource):
 class widgetData(Resource):
   def get(self, widgetId): #update
     try:
-        query = "SELECT ad.* FROM api_data ad INNER JOIN widget w on w.api_id = ad.api_id WHERE w.id = %s"
+        query = "SELECT w.id, ad.data, ad.updated_time FROM api_data ad INNER JOIN widget w on w.api_id = ad.api_id WHERE w.id = %s"
         rst = selectSQL(query, (widgetId))
         if len(rst) > 0:
           return(flask.jsonify(rst[0]))
