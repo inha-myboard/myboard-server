@@ -438,7 +438,7 @@ class dashboardWidgetData(Resource):
         query = 'SELECT widget.id, api_data.data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_id where dashboard_id = %s'
         rst = selectSQL(query, (_dashboardId))
         if len(rst) > 0:
-            query = "UPDATE api_data ad INNER JOIN widget w on w.api_id = ad.api_id INNER JOIN widget_pos wp ON wp.widget_id = w.id SET last_access_time = now() WHERE wp.dashboard_id = %s"
+            query = "UPDATE api_data ad INNER JOIN widget w ON w.api_id = ad.api_id INNER JOIN widget_pos wp ON wp.widget_id = w.id INNER JOIN api a ON a.id = ad.api_id SET a.last_access_time = NOW() WHERE wp.dashboard_id = %s"
             executeSQL(query, (_dashboardId))
         return(flask.jsonify(rst))
 
