@@ -208,10 +208,10 @@ class myboardApiList(Resource):
       # return(flask.jsonify(executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))))
       executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))
       
-      select = "SELECT LAST_INSERT_ID();"
+      select = "SELECT LAST_INSERT_ID() AS id;"
       temp = selectSQL(select, ())
-      last_insert_id = temp[0]
-
+      last_insert_id = temp[0]["id"]
+      
       # insert data
       select = "SELECT api.id, api_json FROM api LEFT JOIN api_data ON api.id = api_data.api_id WHERE api_data.api_id is NULL;"
       temp = selectSQL(select, ())
