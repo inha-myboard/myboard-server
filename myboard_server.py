@@ -217,7 +217,7 @@ class myboardApiList(Resource):
       temp = selectSQL(select, ())
       insert = "INSERT INTO myboard.api_data (api_id, data) VALUES (%s, %s) ON DUPLICATE KEY UPDATE data=%s"
       for i in range(len(temp)):
-        sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
+        sql_data = json.dumps(inspect(str(temp[i]['api_json'])))
         sql_id = temp[i]['id']
         executeSQL(insert, (sql_id, sql_data, sql_data))
       return(last_insert_id)
