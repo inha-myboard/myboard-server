@@ -208,6 +208,10 @@ class myboardApiList(Resource):
       # return(flask.jsonify(executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))))
       executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))
       
+      select = "SELECT LAST_INSERT_ID();"
+      temp = selectSQL(select)
+      last_insert_id = temp[0]
+
       # insert data
       select = "SELECT api.id, api_json FROM api LEFT JOIN api_data ON api.id = api_data.api_id WHERE api_data.api_id is NULL;"
       temp = selectSQL(select)
@@ -215,7 +219,8 @@ class myboardApiList(Resource):
       for i in range(len(temp)):
         sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
         sql_id = temp[i]['id']
-        executeSQL(insert, (sql_id, sql_data, sql_data))  
+        executeSQL(insert, (sql_id, sql_data, sql_data))
+      return(last_insert_id)
     except Exception as e:
       return({'error':str(e)})
 
@@ -290,7 +295,6 @@ class widgetList(Resource):
     try:
         jsondata = request.get_json(force=True)
         _apiApi_id = jsondata['api_id']
-        _apiUser_id = jsondata['user_id']
         _apiCaption = jsondata['caption']
         _apiDescription = jsondata['description']
         _apiMapping_json = jsondata['mapping_json']
