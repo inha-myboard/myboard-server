@@ -347,7 +347,7 @@ class dashboard(Resource):
         try:
             jsondata = request.get_json(force=True)
             query = "UPDATE myboard.dashboard SET name = %s,order_index = %s WHERE id = %s"
-            for dashboard in jsondata:
+            for dashboard in list(jsondata):
                 _dashboardId = dashboard['id']
                 _name = dashboard['name']
                 _icon = dashboard['icon']
