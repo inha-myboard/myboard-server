@@ -28,6 +28,7 @@ mysql = MySQL()
 api = Api(app)
 CORS(app)
 
+
 @app.route('/login')
 def index():
   if 'credentials' not in flask.session:
@@ -73,8 +74,11 @@ def oauth2callback():
     try:
       query = "INSERT INTO myboard.user (id,email,nickname,access_token,img) VALUES (null, %s,%s,%s,%s) ON DUPLICATE KEY UPDATE access_token=%s, nickname=%s, img=%s"
       executeSQL(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
-      query = "SELECT id FROM myboard.user WHERE email = %s" % googleInfo['id_token']['email']
-      flask.session['userId'] = selectSQL(query)
+      
+      query = "SELECT id FROM myboard.user WHERE email = %s"
+      useridval = selectSQL(query, (googleInfo['id_token']['email']))
+       # flask.session['userId']
+      
       # cursor.execute(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
       return(flask.redirect(flask.url_for('index')))
     except Exception as e:
