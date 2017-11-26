@@ -26,23 +26,30 @@ def inspector(inputjson):
 				temp['type'] = 'img'
 				try:
 					temp['src'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
-				except:
+				except: #segment가 없으면. key제거
 					pass
+					#temp.pop('src')
 				try: #seg에서 맨 마지막 parent가 a라면
 					if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
 						href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).href
 						temp['href'] = href
 				except: # seg에서 parent tag가 없다면
 					pass
-				obj[data["segments"][j]['name']] = temp
+				# obj[data["segments"][j]['name']] = temp
 			elif data["segments"][j]['selector'].split(' ')[-1][0] == 'a':
 				temp['type'] = 'text'
-				temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
-				temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
-				obj[data["segments"][j]['name']] = temp
+				try:
+					temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
+					temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+				except:
+					pass
+				# obj[data["segments"][j]['name']] = temp
 			else:
 				temp['type'] = 'text'
-				temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+				try:
+					temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+				except:
+					pass
 				try: #seg에서 맨 마지막 parent가 a라면
 					if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
 						href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).get_attribute('href')
@@ -51,8 +58,12 @@ def inspector(inputjson):
 					if data['body_selector'].split(' ')[-1][0] == 'a':
 						href = body.get_attribute('href')
 						temp['href'] = href
+			if(len(temp.keys()) == 0):
+				continue
 			obj[data["segments"][j]['name']] = temp
 			# print(temp)
+		if(len(obj.keys()) == 0):
+			continue
 		rst.append(obj)
 	return(rst)
 
@@ -94,13 +105,13 @@ if __name__ == '__main__':
 
 	# rst = dict()
 	select = "SELECT id, url, api_json FROM myboard.api;"
-	insert = "INSERT INTO myboard.api_data (api_id, data) VALUES (%s, %s) ON DUPLICATE KEY UPDATE data=%s"
-	temp = selectSQL(select)
-	for i in range(len(temp)):
-		sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
-		sql_id = temp[i]['id']
-		executeSQL(insert, (sql_id, sql_data, sql_data))
+	#select = "SELECT api.id, api_json FROM api LEFT JOIN api_data ON api.id = api_data.api_id WHERE api_data.api_id is NULL"
+	dataList = selectSQL(select)
+	insert = "INSERT INTO myboard.api_data (api_id, data) VALUES (%s, %s) ON DUPLICATE KEY UPDATE data=%s, updated_time=now()"
+	for i in range(len(dataList)):
+		sql_data = json.dumps(inspector(str(dataList[i]['api_json'])))
+		sql_id = dataList[i]['id']
+		print(executeSQL(insert, (sql_id, sql_data, sql_data)))
 		# print(sql_id)
 		# print(sql_data)
-			
 	driver.close()

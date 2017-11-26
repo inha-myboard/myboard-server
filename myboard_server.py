@@ -28,7 +28,7 @@ mysql = MySQL()
 api = Api(app)
 CORS(app)
 
-@app.route('/')
+@app.route('/login')
 def index():
   if 'credentials' not in flask.session:
     return(flask.redirect(flask.url_for('oauth2callback')))
@@ -40,7 +40,7 @@ def index():
     # drive = discovery.build('drive', 'v2', http_auth)
     # files = drive.files().list().execute()
     # return(json.dumps(files))
-    return(flask.redirect(flask.url_for('dashboard')))
+    return(flask.redirect(flask.url_for('/')))
 
 @app.route('/oauth2callback/')
 def oauth2callback():
@@ -59,20 +59,22 @@ def oauth2callback():
     flask.session['credentials'] =  credentials.to_json()
     #DB insert
     googleInfo = json.loads(flask.session['credentials'])
-    print(googleInfo)
-    print(type(googleInfo))
-    print(googleInfo['access_token'])
-    print(googleInfo['id_token']['email'])
+    # print(googleInfo)
+    # print(type(googleInfo))
+    # print(googleInfo['access_token'])
+    # print(googleInfo['id_token']['email'])
     
     reqURL = 'https://www.googleapis.com/plus/v1/people/me'
     headers = {'Authorization': 'Bearer '+googleInfo['access_token']}
     clientInfo = json.loads(requests.get(reqURL, headers = headers).text)
-    print(clientInfo)
-    print(clientInfo['displayName'])
-    print(clientInfo['image']['url'])
+    # print(clientInfo)
+    # print(clientInfo['displayName'])
+    # print(clientInfo['image']['url'])
     try:
-      query = "INSERT INTO myboard.user (id,email,nickname,access_token,img) VALUES (null, %s,%s,%s,%s) ON DUPLICATE KEY UPDATE access_token=%s and nickname=%s and img=%s"
+      query = "INSERT INTO myboard.user (id,email,nickname,access_token,img) VALUES (null, %s,%s,%s,%s) ON DUPLICATE KEY UPDATE access_token=%s, nickname=%s, img=%s"
       executeSQL(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
+      query = "SELECT id FROM myboard.user WHERE email = %s" % googleInfo['id_token']['email']
+      flask.session['userId'] = selectSQL(query)
       # cursor.execute(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
       return(flask.redirect(flask.url_for('index')))
     except Exception as e:
@@ -83,8 +85,12 @@ def dashboard():
   return(render_template('dashboard.html'))
 
 # @app.route('/<name>')
-# def test(name = None):
-#   return(render_template(name+'.html'))
+# def check(name = None):
+#   if 'credentials' not in flask.session:
+#     return(flask.redirect(flask.url_for('oauth2callback')))
+#   else:
+#     return(flask.redirect(flask.url_for(name)))
+
 
 #################UTIL#########################
 def inspector(inputjson):
@@ -348,7 +354,14 @@ class dashboardANDWidget(Resource):
         finally:
             cursor.close()
             conn.close()
-
+###################### PROFILE API ######################
+class profile(Resource):
+    def get(self):
+      if 'credentials' not in flask.session: return(flask.redirect(flask.url_for('oauth2callback')))
+      # print(flask.session)
+      return(flask.session['userId'])
+      # cred = json.loads(flask.session['credentials'])
+      # cred['access_token']
 
 api.add_resource(myboardAPI, '/apis/<apiId>')
 api.add_resource(myboardAPIList, '/apis')
@@ -363,7 +376,8 @@ api.add_resource(widgetAPIList, '/widgets')
 api.add_resource(dashboardAPI, '/dashboards/<dashId>') # //dash id 입력하면 그 대쉬보드를 // get,post,del, put
 api.add_resource(dashboardAPIList, '/users/<userId>/dashboards') # user의 dash list가져오기 //get
 api.add_resource(dashboardANDWidget, '/dashboards/<dashId>/widgets/') # 대시보드 위젯리스트 조회, 저장 //get, post
-# SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = ?
+
+api.add_resource(profile, '/me')
 
 def prepare():
   #MySQL configurations
