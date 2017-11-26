@@ -346,11 +346,14 @@ class dashboard(Resource):
     def put(self, dashboardId): # dashboard update
         try:
             jsondata = request.get_json(force=True)
-            _dashboardId = dashboardId
-            _name = jsondata['name']
-            _order_index = jsondata['index']
             query = "UPDATE myboard.dashboard SET name = %s,order_index = %s WHERE id = %s"
-            return(flask.jsonify(executeSQL(query, (_name, _order_index, _dashboardId ))))
+            for dashboard in jsondata:
+                _dashboardId = dashboard['id']
+                _name = dashboard['name']
+                _icon = dashboard['icon']
+                _order_index = dashboard['order_index']
+                executeSQL(query, (_name, _order_index, _dashboardId ))
+            return('', 204)
         except Exception as e:
             return({'error':str(e)})
     def delete(self, dashboardId): #del
