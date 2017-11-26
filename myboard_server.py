@@ -193,7 +193,7 @@ class myboardApi(Resource):
 class myboardApiList(Resource):
   def get(self):
     query = "SELECT id,user_id,name,caption,description,type,url,api_json from myboard.api"
-    return(flask.jsonify(selectSQL(query)))
+    return(flask.jsonify(selectSQL(query, ())))
   def post(self):
     try:
       jsondata = request.get_json(force=True)
@@ -214,7 +214,7 @@ class myboardApiList(Resource):
 
       # insert data
       select = "SELECT api.id, api_json FROM api LEFT JOIN api_data ON api.id = api_data.api_id WHERE api_data.api_id is NULL;"
-      temp = selectSQL(select)
+      temp = selectSQL(select, ())
       insert = "INSERT INTO myboard.api_data (api_id, data) VALUES (%s, %s) ON DUPLICATE KEY UPDATE data=%s"
       for i in range(len(temp)):
         sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
