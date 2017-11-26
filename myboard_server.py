@@ -298,6 +298,7 @@ class widgetList(Resource):
         _apiCaption = jsondata['caption']
         _apiDescription = jsondata['description']
         _apiMapping_json = jsondata['mapping_json']
+        _apiUser_id = jsondata['user_id']
         query = "INSERT INTO myboard.widget (id,api_id,user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, now())"
         return(flask.jsonify(executeSQL(query, ( _apiApi_id, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json))))
     except Exception as e:
