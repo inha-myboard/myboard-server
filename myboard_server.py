@@ -309,23 +309,28 @@ class userDashboardList(Resource):
         try:
             jsondata = request.get_json(force=True)
             _user_id = userId
-            _dashboardName = jsondata['name']
+            _name = jsondata['name']
+            _icon = jsondata['icon']
             _order_index = jsondata['index']
-            query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-            return(flask.jsonify(executeSQL(query, (_user_id, _dashboardName, _order_index))))
+            query = "INSERT INTO myboard.dashboard (id, user_id, name, icon, order_index) VALUES (null, %s, %s, %s, %s)"
+            return(flask.jsonify(executeSQL(query, (_user_id, _name, _icon,_order_index))))
         except Exception as e:
             return({'error':str(e)})
-    def put(self, userId):
+    def put(self, userId): # dashboard update
         try:
             jsondata = request.get_json(force=True)
-            _user_id = userId
-            _dashboardId = jsondata['id']
-            _dashboardName = jsondata['name']
-            _order_index = jsondata['index']
-            query = "UPDATE myboard.dashboard SET name = %s, order_index = %s WHERE id = %s"
-            return(flask.jsonify(executeSQL(query, (_dashboardName, _order_index, _dashboardId))))
+            query = "UPDATE myboard.dashboard SET name = %s, icon = %s, order_index = %s WHERE id = %s"
+            for dashboard in jsondata:
+                _id = dashboard['id']
+                _name = dashboard['name']
+                _icon = dashboard['icon']
+                _order_index = dashboard['order_index']
+                executeSQL(query, (_name, _icon, _order_index, _id ))
+            return('', 204)
         except Exception as e:
             return({'error':str(e)})
+
+
 
 class dashboard(Resource):
     # def get(self, dashboardId):
@@ -343,23 +348,25 @@ class dashboard(Resource):
     #         return(executeSQL(query, (_User_id, _dashboardName, _order_index)))
     #     except Exception as e:
     #         return({'error':str(e)})
-    def put(self, dashboardId): # dashboard update
+
+    def put(self, userId):
         try:
             jsondata = request.get_json(force=True)
-            query = "UPDATE myboard.dashboard SET name = %s,order_index = %s WHERE id = %s"
-            for dashboard in list(jsondata):
-                _dashboardId = dashboard['id']
-                _name = dashboard['name']
-                _icon = dashboard['icon']
-                _order_index = dashboard['order_index']
-                executeSQL(query, (_name, _order_index, _dashboardId ))
-            return('', 204)
+            _id = jsondata['id']
+            _name = jsondata['name']
+            _icon = jsondata['icon']
+            _order_index = jsondata['index']
+            query = "UPDATE myboard.dashboard SET name = %s, order_index = %s WHERE id = %s"
+            return(flask.jsonify(executeSQL(query, (_name, _icon, _order_index, _id))))
         except Exception as e:
             return({'error':str(e)})
+
+
     def delete(self, dashboardId): #del
         _dashboardId = dashboardId
         query = "DELETE FROM myboard.dashboard WHERE id = %s"
         return(flask.jsonify(executeSQL(query, (_dashboardId))))
+
 
 class dashboardWidgetList(Resource):
     def get(self, dashboardId):
