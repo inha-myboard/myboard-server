@@ -209,7 +209,7 @@ class myboardApiList(Resource):
       executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))
       
       select = "SELECT LAST_INSERT_ID();"
-      temp = selectSQL(select)
+      temp = selectSQL(select, ())
       last_insert_id = temp[0]
 
       # insert data
