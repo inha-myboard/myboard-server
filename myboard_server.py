@@ -23,6 +23,7 @@ import time, re
 from flask_restful import Resource, Api
 from flask_restful import reqparse
 
+passAuth = True
 app = flask.Flask(__name__, static_folder='assets')
 mysql = MySQL()
 api = Api(app)
@@ -30,7 +31,7 @@ CORS(app)
 
 @app.before_request
 def before_request():
-  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback':
+  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is False:
     return(flask.redirect(flask.url_for('oauth2callback')))
 
 @app.route('/login')
@@ -203,7 +204,7 @@ class myboardApi(Resource):
       _apiType = jsondata['type']
       _apiUrl = jsondata['url']
       _apiApi_json = jsondata['api_json']
-      _apiUser_id = flask.session['userId'][0]['id']
+      _apiUser_id =  0 if passAuth is True else flask.session['userId'][0]['id']
       # _apiName = jsondata['name']
       query = "UPDATE myboard.api SET name = %s, caption = %s, description = %s, type = %s, url = %s, api_json = %s, created_time = now()  WHERE id = %s"
       return(flask.jsonify(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiId ))))
@@ -220,7 +221,7 @@ class myboardApiList(Resource):
   def post(self):
     try:
       jsondata = request.get_json(force=True)
-      _apiUser_id = flask.session['userId'][0]['id']
+      _apiUser_id = 0 if passAuth is True else flask.session['userId'][0]['id']
       _apiName = jsondata['name']
       _apiCaption = jsondata['caption']
       _apiDescription = jsondata['description']
@@ -280,7 +281,7 @@ class widget(Resource):
         # _apiId = jsondata['id']
         _apiId = widgetId
         _apiApi_id = jsondata['api_id']
-        _apiUser_id = flask.session['userId'][0]['id']
+        _apiUser_id = 0 if passAuth is True else flask.session['userId'][0]['id']
         _apiCaption = jsondata['caption']
         _apiDescription = jsondata['description']
         _apiMapping_json = jsondata['mapping_json']
@@ -323,7 +324,7 @@ class widgetList(Resource):
         _apiCaption = jsondata['caption']
         _apiDescription = jsondata['description']
         _apiMapping_json = jsondata['mapping_json']
-        _apiUser_id = flask.session['userId'][0]['id']
+        _apiUser_id = 0 if passAuth is True else flask.session['userId'][0]['id']
         query = "INSERT INTO myboard.widget (id,api_id,type, user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, %s, now())"
         return(flask.jsonify(executeSQL(query, ( _apiApi_id, _apiType, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json))))
     except Exception as e:
@@ -332,21 +333,28 @@ class widgetList(Resource):
 ###################### DASHBOARD API ######################
 class userDashboardList(Resource):
     def get(self, userId): #dashboard list
-        _apiUser_id = userId
+        if passAuth is False and userId is not flask.session['userId'][0]['id']:
+            return('access denied', 403)
         query = "SELECT id, name, icon, order_index FROM myboard.dashboard WHERE user_id=%s"
-        return(selectSQL(query, (_apiUser_id)))
+        return(selectSQL(query, (userId)))
     def post(self, userId): #insert
+        if passAuth is False and  userId is not flask.session['userId'][0]['id']:
+            return('access denied', 403)
         try:
             jsondata = request.get_json(force=True)
-            _user_id = userId
-            _name = jsondata['name']
-            _icon = jsondata['icon']
-            _order_index = jsondata['index']
-            query = "INSERT INTO myboard.dashboard (id, user_id, name, icon, order_index) VALUES (null, %s, %s, %s, %s)"
-            return(flask.jsonify(executeSQL(query, (_user_id, _name, _icon,_order_index))))
+            query = "INSERT INTO myboard.dashboard (user_id, name, icon, order_index) VALUES (%s, %s, %s, %s)"
+            for dashboard in jsondata:
+                _name = dashboard['name']
+                _icon = dashboard['icon']
+                _user_id = 0 if passAuth is True else flask.session['userId'][0]['id']
+                _order_index = dashboard['order_index']
+                executeSQL(query, (_user_id, _name, _icon, _order_index))
+            return('', 204)
         except Exception as e:
             return({'error':str(e)}, 500)
     def put(self, userId): # dashboard update
+        if passAuth is False and  userId is not flask.session['userId'][0]['id']:
+            return('access denied', 403)
         try:
             jsondata = request.get_json(force=True)
             query = "UPDATE myboard.dashboard SET name = %s, icon = %s, order_index = %s WHERE id = %s"
@@ -355,10 +363,23 @@ class userDashboardList(Resource):
                 _name = dashboard['name']
                 _icon = dashboard['icon']
                 _order_index = dashboard['order_index']
-                executeSQL(query, (_name, _icon, _order_index, _id ))
+                executeSQL(query, (_name, _icon, _order_index, _id))
             return('', 204)
         except Exception as e:
-            return({'error':str(e)}, 500)
+            return({'error': str(e)}, 500)
+    def delete(self, userId): # dashboard update
+        if passAuth is False and  userId is not flask.session['userId'][0]['id']:
+            return('access denied', 403)
+        try:
+            jsondata = request.get_json(force=True)
+            query = "DELETE FROM myboard.dashboard WHERE id = %s"
+            for dashboard in jsondata:
+                _id = dashboard['id']
+                executeSQL(query, (_id))
+            return('', 204)
+        except Exception as e:
+            return({'error': str(e)}, 500)
+
 
 class dashboard(Resource):
     # def get(self, dashboardId):
@@ -438,12 +459,13 @@ class dashboardWidgetData(Resource):
 ###################### PROFILE API ######################
 class profile(Resource):
     def get(self):
-      # if 'credentials' not in flask.session: return(flask.redirect(flask.url_for('oauth2callback')))
-      # print(flask.session)
       try:
-        return(flask.session['userId'][0]['id'])
-      except:
-        return("set user id err")
+        _user_id = 0 if passAuth is True else flask.session['userId'][0]['id']
+        query = "SELECT id, email, nickname, img FROM user WHERE id = %s"
+        rst = selectSQL(query, (_user_id))
+        return(flask.jsonify(rst[0]))
+      except Exception as e:
+        return(str(e), '500')
 
 
 api.add_resource(myboardApi, '/apis/<apiId>')
