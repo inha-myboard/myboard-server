@@ -28,11 +28,15 @@ mysql = MySQL()
 api = Api(app)
 CORS(app)
 
+@app.before_request
+def before_request():
+  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback':
+    return(flask.redirect(flask.url_for('oauth2callback')))
 
 @app.route('/login')
 def index():
-  if 'credentials' not in flask.session:
-    return(flask.redirect(flask.url_for('oauth2callback')))
+  # if 'credentials' not in flask.session:
+  #   return(flask.redirect(flask.url_for('oauth2callback')))
   credentials = client.OAuth2Credentials.from_json(flask.session['credentials'])
   if credentials.access_token_expired:
     return(flask.redirect(flask.url_for('oauth2callback')))
