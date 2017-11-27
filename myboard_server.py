@@ -74,7 +74,7 @@ def oauth2callback():
       flask.session['userId'] = selectSQL(query, (googleInfo['id_token']['email']))
       return(flask.redirect(flask.url_for('index')))
     except Exception as e:
-      return({'error':str(e)})
+      return({'error':str(e)}, 500)
 
 # @app.route('/<name>')
 # def check(name = None):
@@ -82,12 +82,12 @@ def oauth2callback():
 #     return(flask.redirect(flask.url_for('oauth2callback')))
 #   else:
 #     return(flask.redirect(flask.url_for(name)))
-
-def inspect(inputjson):
-  data = json.loads(inputjson.replace('\'','"')) #json or str to dict
-  driver.get(data["url"])
+def inspect(url, inputjson):
+  data = json.loads(inputjson.replace('\'','"'))#json or str to dict
+  driver.get(url)
   ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
-
+  # driver.refresh()
+  # ui.WebDriverWait(driver, 10).until(lambda browser: driver.find_element_by_tag_name('body'))
   rst = list()
   bodyPath = data['body_selector']
   bodys = driver.find_elements_by_css_selector(bodyPath)
@@ -100,23 +100,30 @@ def inspect(inputjson):
         temp['type'] = 'img'
         try:
           temp['src'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
-        except:
+        except: #segment가 없으면. key제거
           pass
+          #temp.pop('src')
         try: #seg에서 맨 마지막 parent가 a라면
           if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
             href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).href
             temp['href'] = href
         except: # seg에서 parent tag가 없다면
           pass
-        obj[data["segments"][j]['name']] = temp
+        # obj[data["segments"][j]['name']] = temp
       elif data["segments"][j]['selector'].split(' ')[-1][0] == 'a':
         temp['type'] = 'text'
-        temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
-        temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
-        obj[data["segments"][j]['name']] = temp
+        try:
+          temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
+          temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+        except:
+          pass
+        # obj[data["segments"][j]['name']] = temp
       else:
         temp['type'] = 'text'
-        temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+        try:
+          temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+        except:
+          pass
         try: #seg에서 맨 마지막 parent가 a라면
           if data["segments"][j]['selector'].split(' ')[-3][0] == 'a':
             href = body.find_element_by_css_selector(data["segments"][j]['selector'][0:(data["segments"][j]['selector'].rfind('>')-1)]).get_attribute('href')
@@ -125,12 +132,17 @@ def inspect(inputjson):
           if data['body_selector'].split(' ')[-1][0] == 'a':
             href = body.get_attribute('href')
             temp['href'] = href
+      if(len(temp.keys()) == 0):
+        continue
       obj[data["segments"][j]['name']] = temp
       # print(temp)
+    if(len(obj.keys()) == 0):
+      continue
     rst.append(obj)
   return(rst)
 
-def selectSQL(query, parameter):
+
+def selectSQL(query, parameter=()):
   conn = mysql.connect()
   cursor = conn.cursor()
   try:
@@ -139,21 +151,37 @@ def selectSQL(query, parameter):
     result = [{columns[index][0]:column for index, column in enumerate(value)} for value in cursor.fetchall()]
     return(result)
   except Exception as e:
-    return({'error':str(e)})
+    return({'error':str(e)}, 500)
   finally:
     cursor.close()
     conn.close()
 
 
-def executeSQL(query, parameter):
+def insertSQL(query, parameter=()):
+  conn = mysql.connect()
+  cursor = conn.cursor()
+  try:
+    cursor.execute(query, parameter)
+    cursor.execute("SELECT LAST_INSERT_ID() AS id;")
+    result = cursor.fetchall()
+    conn.commit()
+    return({'inserted_id': result[0][0], 'query': query%parameter}, 200)
+  except Exception as e:
+    return({'error':str(e)}, 500)
+  finally:
+    cursor.close()
+    conn.close()
+
+
+def executeSQL(query, parameter=()):
   conn = mysql.connect()
   cursor = conn.cursor()
   try:
     cursor.execute(query, parameter)
     conn.commit()
-    return({'StatusCode': '200', 'query': query%parameter})
+    return(query % parameter, 200)
   except Exception as e:
-    return({'error':str(e)})
+    return({'error':str(e)}, 500)
   finally:
     cursor.close()
     conn.close()
@@ -176,7 +204,7 @@ class myboardApi(Resource):
       query = "UPDATE myboard.api SET name = %s, caption = %s, description = %s, type = %s, url = %s, api_json = %s, created_time = now()  WHERE id = %s"
       return(flask.jsonify(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiId ))))
     except Exception as e:
-      return({'error':str(e)})
+      return({'error':str(e)}, 500)
   def delete(self, apiId):
     _apiId = apiId
     query = "DELETE FROM myboard.api WHERE id = %s"
@@ -184,7 +212,7 @@ class myboardApi(Resource):
 class myboardApiList(Resource):
   def get(self):
     query = "SELECT id,user_id,name,caption,description,type,url,api_json from myboard.api"
-    return(flask.jsonify(selectSQL(query)))
+    return(flask.jsonify(selectSQL(query, ())))
   def post(self):
     try:
       jsondata = request.get_json(force=True)
@@ -197,18 +225,21 @@ class myboardApiList(Resource):
       _apiUrl = jsondata['url']
       query = "INSERT INTO myboard.api (id, user_id, name, caption, description, type, url, api_json, created_time) VALUES (null, %s, %s, %s, %s, %s, %s, %s, now())"
       # return(flask.jsonify(executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))))
-      executeSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))
+      result = insertSQL(query, (_apiUser_id, _apiName, _apiCaption, _apiDescription, _apiType, _apiUrl, _apiApi_json))
+      print(result)
+      last_insert_id = result[0]['inserted_id']
       
       # insert data
       select = "SELECT api.id, api_json FROM api LEFT JOIN api_data ON api.id = api_data.api_id WHERE api_data.api_id is NULL;"
-      temp = selectSQL(select)
-      insert = "INSERT INTO myboard.api_data (api_id, data) VALUES (%s, %s) ON DUPLICATE KEY UPDATE data=%s"
+      temp = selectSQL(select, ())
+      insert = "INSERT INTO myboard.api_data (api_id, data, updated_time) VALUES (%s, %s, now()) ON DUPLICATE KEY UPDATE data=%s, updated_time = now()"
       for i in range(len(temp)):
-        sql_data = json.dumps(inspector(str(temp[i]['api_json'])))
-        sql_id = temp[i]['id']
-        executeSQL(insert, (sql_id, sql_data, sql_data))  
+        api_json = json.dumps(inspect(_apiUrl, str(temp[i]['api_json'])))
+        api_id = temp[i]['id']
+        executeSQL(insert, (api_id, api_json, api_json))
+      return({'id': last_insert_id})
     except Exception as e:
-      return({'error':str(e)})
+      return({'error':str(e)}, 500)
 
 ###################### INSPECTOR API ######################
 class inspectApi(Resource):
@@ -219,12 +250,13 @@ class inspectApi(Resource):
     def post(self):
       try:
         jsondata = request.get_json(force=True)
-        _apiApi_json = jsondata['api_json']
+        url = jsondata['url']
+        api_json = jsondata['api_json']
         # _apiUrl = jsondata['url']
-        preview = inspect(json.dumps(_apiApi_json))
+        preview = inspect(url, api_json)
         return(preview)
       except Exception as e:
-        return({'error':str(e)})
+        return({'error':str(e)}, 500)
 
 
 ###################### WIDGET API ######################
@@ -237,7 +269,7 @@ class widget(Resource):
           return(flask.jsonify(rst[0]))
         return ('', 204)
     except Exception as e:
-        return({'error':str(e)})
+        return({'error':str(e)}, 500)
   def put(self, widgetId): #update
     try:
         jsondata = request.get_json(force=True)
@@ -251,7 +283,7 @@ class widget(Resource):
         query = "UPDATE myboard.widget SET api_id = %s,user_id = %s,caption = %s,description = %s,mapping_json = %s, created_time = now()  WHERE id = %s"
         return(flask.jsonify(executeSQL(query, (_apiApi_id,_apiUser_id,_apiCaption,_apiDescription,_apiMapping_json,_apiId ))))
     except Exception as e:
-        return({'error':str(e)})
+        return({'error':str(e)}, 500)
   def delete(self, widgetId):
       _apiId = widgetId
       query = "DELETE FROM myboard.widget WHERE id = %s"
@@ -261,13 +293,15 @@ class widget(Resource):
 class widgetData(Resource):
   def get(self, widgetId): #update
     try:
-        query = "SELECT ad.* FROM api_data ad INNER JOIN widget w on w.api_id = ad.api_id WHERE w.id = %s"
+        query = "SELECT w.id, ad.data, ad.updated_time FROM api_data ad INNER JOIN widget w on w.api_id = ad.api_id WHERE w.id = %s"
         rst = selectSQL(query, (widgetId))
         if len(rst) > 0:
+          query = "UPDATE api_data ad INNER JOIN widget w on w.api_id = ad.api_id SET last_access_time = now() WHERE w.id = %s"
+          executeSQL(query, (widgetId))
           return(flask.jsonify(rst[0]))
         return ('', 204)
     except Exception as e:
-        return({'error':str(e)})
+        return({'error':str(e)}, 500)
 
 
 class widgetList(Resource):
@@ -275,20 +309,21 @@ class widgetList(Resource):
     user_id = request.args.get('user_id', default = None)
     query = "SELECT w.id,w.caption, user.nickname,w.description,api.url, w.created_time from myboard.widget w inner join api on w.api_id = api.id inner join user on w.user_id = user.id"
     if user_id  is  not  None:
-      query = query + " WHERE user_id = %s" % user_id
+        query = query + " WHERE user_id = %s" % user_id
     return(flask.jsonify(selectSQL(query, ())))
   def post(self): # 사용자가 위젯을 등록. 현재 구조로 API 먼저 등록하고 위젯 등록.
     try:
-      jsondata = request.get_json(force=True)
-      _apiApi_id = jsondata['api_id']
-      _apiUser_id = flask.session['userId'][0]['id']
-      _apiCaption = jsondata['caption']
-      _apiDescription = jsondata['description']
-      _apiMapping_json = jsondata['mapping_json']
-      query = "INSERT INTO myboard.widget (id,api_id,user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, now())"
-      return(flask.jsonify(executeSQL(query, ( _apiApi_id, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json))))
+        jsondata = request.get_json(force=True)
+        _apiApi_id = jsondata['api_id']
+        _apiType = jsondata['type']
+        _apiCaption = jsondata['caption']
+        _apiDescription = jsondata['description']
+        _apiMapping_json = jsondata['mapping_json']
+        _apiUser_id = flask.session['userId'][0]['id']
+        query = "INSERT INTO myboard.widget (id,api_id,type, user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, %s, now())"
+        return(flask.jsonify(executeSQL(query, ( _apiApi_id, _apiType, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json))))
     except Exception as e:
-      return({'error':str(e)})
+        return({'error':str(e)}, 500)
 
 ###################### DASHBOARD API ######################
 class userDashboardList(Resource):
@@ -298,14 +333,28 @@ class userDashboardList(Resource):
         return(selectSQL(query, (_apiUser_id)))
     def post(self, userId): #insert
         try:
-          jsondata = request.get_json(force=True)
-          _user_id = userId
-          _dashboardName = jsondata['name']
-          _order_index = jsondata['index']
-          query = "INSERT INTO myboard.dashboard (id, user_id, name, order_index) VALUES (null, %s, %s, %s)"
-          return(flask.jsonify(executeSQL(query, (_user_id, _dashboardName, _order_index))))
+            jsondata = request.get_json(force=True)
+            _user_id = userId
+            _name = jsondata['name']
+            _icon = jsondata['icon']
+            _order_index = jsondata['index']
+            query = "INSERT INTO myboard.dashboard (id, user_id, name, icon, order_index) VALUES (null, %s, %s, %s, %s)"
+            return(flask.jsonify(executeSQL(query, (_user_id, _name, _icon,_order_index))))
         except Exception as e:
-            return({'error':str(e)})
+            return({'error':str(e)}, 500)
+    def put(self, userId): # dashboard update
+        try:
+            jsondata = request.get_json(force=True)
+            query = "UPDATE myboard.dashboard SET name = %s, icon = %s, order_index = %s WHERE id = %s"
+            for dashboard in jsondata:
+                _id = dashboard['id']
+                _name = dashboard['name']
+                _icon = dashboard['icon']
+                _order_index = dashboard['order_index']
+                executeSQL(query, (_name, _icon, _order_index, _id ))
+            return('', 204)
+        except Exception as e:
+            return({'error':str(e)}, 500)
 
 class dashboard(Resource):
     # def get(self, dashboardId):
@@ -323,20 +372,25 @@ class dashboard(Resource):
     #         return(executeSQL(query, (_User_id, _dashboardName, _order_index)))
     #     except Exception as e:
     #         return({'error':str(e)})
-    def put(self, dashboardId): # dashboard update
+
+    def put(self, userId):
         try:
             jsondata = request.get_json(force=True)
-            _dashboardId = dashboardId
+            _id = jsondata['id']
             _name = jsondata['name']
+            _icon = jsondata['icon']
             _order_index = jsondata['index']
-            query = "UPDATE myboard.dashboard SET name = %s,order_index = %s WHERE id = %s"
-            return(flask.jsonify(executeSQL(query, (_name, _order_index, _dashboardId ))))
+            query = "UPDATE myboard.dashboard SET name = %s, order_index = %s WHERE id = %s"
+            return(flask.jsonify(executeSQL(query, (_name, _icon, _order_index, _id))))
         except Exception as e:
-            return({'error':str(e)})
+            return({'error':str(e)}, 500)
+
+
     def delete(self, dashboardId): #del
         _dashboardId = dashboardId
         query = "DELETE FROM myboard.dashboard WHERE id = %s"
         return(flask.jsonify(executeSQL(query, (_dashboardId))))
+
 
 class dashboardWidgetList(Resource):
     def get(self, dashboardId):
@@ -354,13 +408,13 @@ class dashboardWidgetList(Resource):
             cursor.execute("DELETE FROM myboard.widget_pos WHERE dashboard_id = %s;", (dashboardId))
 
             for obj in jsondata:
-                widget_id = obj['widget_id']
+                widget_id = obj['id']
                 props_json = obj['props_json']
-                cursor.execute("INSERT INTO myboard.widget_pos (widget_id, dashboard_id, props_json) value (%s, , %s, %s);", (widget_id, dashboardId, json.dumps(props_json)))
+                cursor.execute("INSERT INTO myboard.widget_pos (widget_id, dashboard_id, props_json) values (%s, %s, %s);", (widget_id, dashboardId, props_json))
             conn.commit()
         except Exception as e:
             conn.rollback()
-            return({'error':str(e)})
+            return({'error':str(e)}, 500)
         finally:
             cursor.close()
             conn.close()
@@ -371,6 +425,9 @@ class dashboardWidgetData(Resource):
         _dashboardId = dashboardId
         query = 'SELECT widget.id, api_data.data FROM myboard.widget_pos inner join myboard.widget on myboard.widget_pos.widget_id = myboard.widget.id inner join api_data on widget.api_id = api_data.api_id where dashboard_id = %s'
         rst = selectSQL(query, (_dashboardId))
+        if len(rst) > 0:
+            query = "UPDATE api_data ad INNER JOIN widget w ON w.api_id = ad.api_id INNER JOIN widget_pos wp ON wp.widget_id = w.id INNER JOIN api a ON a.id = ad.api_id SET a.last_access_time = NOW() WHERE wp.dashboard_id = %s"
+            executeSQL(query, (_dashboardId))
         return(flask.jsonify(rst))
 
 
