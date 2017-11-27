@@ -38,18 +38,13 @@ def index():
     return(flask.redirect(flask.url_for('oauth2callback')))
   else:
     http_auth = credentials.authorize(httplib2.Http())
-    # drive = discovery.build('drive', 'v2', http_auth)
-    # files = drive.files().list().execute()
-    # return(json.dumps(files))
     return(flask.redirect(flask.url_for('/')))
 
 @app.route('/oauth2callback/')
 def oauth2callback():
-  #print(flask.url_for('oauth2callback', _external=True))
   flow = client.flow_from_clientsecrets(
       filename='./client_secrets.json',
       scope='email',
-      # scope = 'https://www.googleapis.com/auth/userinfo.profile',
       redirect_uri=flask.url_for('oauth2callback', _external=True))
   if 'code' not in flask.request.args:
     auth_uri = flow.step1_get_authorize_url()
@@ -76,10 +71,7 @@ def oauth2callback():
       executeSQL(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
       
       query = "SELECT id FROM myboard.user WHERE email = %s"
-      useridval = selectSQL(query, (googleInfo['id_token']['email']))
-       # flask.session['userId']
-      
-      # cursor.execute(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
+      flask.session['userId'] = selectSQL(query, (googleInfo['id_token']['email']))
       return(flask.redirect(flask.url_for('index')))
     except Exception as e:
       return({'error':str(e)})
@@ -90,7 +82,6 @@ def oauth2callback():
 #     return(flask.redirect(flask.url_for('oauth2callback')))
 #   else:
 #     return(flask.redirect(flask.url_for(name)))
-
 
 def inspect(inputjson):
   data = json.loads(inputjson.replace('\'','"')) #json or str to dict
@@ -180,7 +171,7 @@ class myboardApi(Resource):
       _apiType = jsondata['type']
       _apiUrl = jsondata['url']
       _apiApi_json = jsondata['api_json']
-      _apiUser_id = jsondata['user_id']
+      _apiUser_id = flask.session['userId'][0]['id']
       # _apiName = jsondata['name']
       query = "UPDATE myboard.api SET name = %s, caption = %s, description = %s, type = %s, url = %s, api_json = %s, created_time = now()  WHERE id = %s"
       return(flask.jsonify(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiId ))))
@@ -197,7 +188,7 @@ class myboardApiList(Resource):
   def post(self):
     try:
       jsondata = request.get_json(force=True)
-      _apiUser_id = jsondata['user_id']
+      _apiUser_id = flask.session['userId'][0]['id']
       _apiName = jsondata['name']
       _apiCaption = jsondata['caption']
       _apiDescription = jsondata['description']
@@ -253,7 +244,7 @@ class widget(Resource):
         # _apiId = jsondata['id']
         _apiId = widgetId
         _apiApi_id = jsondata['api_id']
-        _apiUser_id = jsondata['user_id']
+        _apiUser_id = flask.session['userId'][0]['id']
         _apiCaption = jsondata['caption']
         _apiDescription = jsondata['description']
         _apiMapping_json = jsondata['mapping_json']
@@ -290,7 +281,7 @@ class widgetList(Resource):
     try:
       jsondata = request.get_json(force=True)
       _apiApi_id = jsondata['api_id']
-      _apiUser_id = jsondata['user_id']
+      _apiUser_id = flask.session['userId'][0]['id']
       _apiCaption = jsondata['caption']
       _apiDescription = jsondata['description']
       _apiMapping_json = jsondata['mapping_json']
@@ -386,11 +377,12 @@ class dashboardWidgetData(Resource):
 ###################### PROFILE API ######################
 class profile(Resource):
     def get(self):
-      if 'credentials' not in flask.session: return(flask.redirect(flask.url_for('oauth2callback')))
+      # if 'credentials' not in flask.session: return(flask.redirect(flask.url_for('oauth2callback')))
       # print(flask.session)
-      return(flask.session['userId'])
-      # cred = json.loads(flask.session['credentials'])
-      # cred['access_token']
+      try:
+        return(flask.session['userId'][0]['id'])
+      except:
+        return("set user id err")
 
 
 api.add_resource(myboardApi, '/apis/<apiId>')
