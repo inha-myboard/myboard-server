@@ -23,6 +23,7 @@ import time, re
 from flask_restful import Resource, Api
 from flask_restful import reqparse
 
+passAuth = True
 app = flask.Flask(__name__, static_folder='assets')
 mysql = MySQL()
 api = Api(app)
@@ -30,16 +31,17 @@ CORS(app)
 
 @app.before_request
 def before_request():
-  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and request.endpoint != 'index':
+  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is True and request.endpoint != 'login':
+  # if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is False:
     return(flask.redirect(flask.url_for('oauth2callback')))
 
+@app.route('/')
 @app.route('/index')
-def homedirTest():
+def index():
   return("testpage")
 
-
 @app.route('/login')
-def index():
+def login():
   # if 'credentials' not in flask.session:
   #   return(flask.redirect(flask.url_for('oauth2callback')))
   credentials = client.OAuth2Credentials.from_json(flask.session['credentials'])
@@ -78,24 +80,24 @@ def oauth2callback():
     flask.session['credentials'] =  credentials.to_json()
     #DB insert
     googleInfo = json.loads(flask.session['credentials'])
-    print(googleInfo)
-    print(type(googleInfo))
-    print(googleInfo['access_token'])
-    print(googleInfo['id_token']['email'])
+    # print(googleInfo)
+    # print(type(googleInfo))
+    # print(googleInfo['access_token'])
+    # print(googleInfo['id_token']['email'])
     
     reqURL = 'https://www.googleapis.com/plus/v1/people/me'
     headers = {'Authorization': 'Bearer '+googleInfo['access_token']}
     clientInfo = json.loads(requests.get(reqURL, headers = headers).text)
-    print(clientInfo)
-    print(clientInfo['displayName'])
-    print(clientInfo['image']['url'])
+    # print(clientInfo)
+    # print(clientInfo['displayName'])
+    # print(clientInfo['image']['url'])
     try:
       query = "INSERT INTO myboard.user (id,email,nickname,access_token,img) VALUES (null, %s,%s,%s,%s) ON DUPLICATE KEY UPDATE access_token=%s, nickname=%s, img=%s"
       executeSQL(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
       
       query = "SELECT id FROM myboard.user WHERE email = %s"
       flask.session['userId'] = selectSQL(query, (googleInfo['id_token']['email']))
-      return(flask.redirect(flask.url_for('apis')))
+      return(flask.redirect(flask.url_for('index')))
     except Exception as e:
       return({'error':str(e)}, 500)
 
@@ -105,6 +107,8 @@ def oauth2callback():
 #     return(flask.redirect(flask.url_for('oauth2callback')))
 #   else:
 #     return(flask.redirect(flask.url_for(name)))
+
+###################### INSPECTOR ######################
 def inspect(url, inputjson):
   data = json.loads(inputjson.replace('\'','"'))#json or str to dict
   driver.get(url)
@@ -120,9 +124,9 @@ def inspect(url, inputjson):
     for j in range(len(data["segments"])):
       temp = dict()
       if data["segments"][j]['selector'].split(' ')[-1][0:3] == 'img':
-        temp['type'] = 'img'
         try:
           temp['src'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('src')
+          temp['type'] = 'img'
         except: #segment가 없으면. key제거
           pass
           #temp.pop('src')
@@ -134,17 +138,17 @@ def inspect(url, inputjson):
           pass
         # obj[data["segments"][j]['name']] = temp
       elif data["segments"][j]['selector'].split(' ')[-1][0] == 'a':
-        temp['type'] = 'text'
         try:
           temp['href'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('href')
           temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+          temp['type'] = 'text'
         except:
           pass
         # obj[data["segments"][j]['name']] = temp
       else:
-        temp['type'] = 'text'
         try:
           temp['text'] = body.find_element_by_css_selector(data["segments"][j]['selector']).get_attribute('innerText')
+          temp['type'] = 'text'
         except:
           pass
         try: #seg에서 맨 마지막 parent가 a라면
@@ -222,7 +226,7 @@ class myboardApi(Resource):
       _apiType = jsondata['type']
       _apiUrl = jsondata['url']
       _apiApi_json = jsondata['api_json']
-      _apiUser_id = flask.session['userId'][0]['id']
+      _apiUser_id =  0 if passAuth is True else flask.session['userId'][0]['id']
       # _apiName = jsondata['name']
       query = "UPDATE myboard.api SET name = %s, caption = %s, description = %s, type = %s, url = %s, api_json = %s, created_time = now()  WHERE id = %s"
       return(flask.jsonify(executeSQL(query, (_apiChange_name,_apiCaption,_apiDescription,_apiType,_apiUrl,_apiApi_json,_apiId ))))
@@ -239,7 +243,7 @@ class myboardApiList(Resource):
   def post(self):
     try:
       jsondata = request.get_json(force=True)
-      _apiUser_id = flask.session['userId'][0]['id']
+      _apiUser_id = 0 if passAuth is True else flask.session['userId'][0]['id']
       _apiName = jsondata['name']
       _apiCaption = jsondata['caption']
       _apiDescription = jsondata['description']
@@ -299,7 +303,7 @@ class widget(Resource):
         # _apiId = jsondata['id']
         _apiId = widgetId
         _apiApi_id = jsondata['api_id']
-        _apiUser_id = flask.session['userId'][0]['id']
+        _apiUser_id = 0 if passAuth is True else flask.session['userId'][0]['id']
         _apiCaption = jsondata['caption']
         _apiDescription = jsondata['description']
         _apiMapping_json = jsondata['mapping_json']
@@ -342,7 +346,7 @@ class widgetList(Resource):
         _apiCaption = jsondata['caption']
         _apiDescription = jsondata['description']
         _apiMapping_json = jsondata['mapping_json']
-        _apiUser_id = flask.session['userId'][0]['id']
+        _apiUser_id = 0 if passAuth is True else flask.session['userId'][0]['id']
         query = "INSERT INTO myboard.widget (id,api_id,type, user_id,caption,description,mapping_json,created_time) VALUES (null, %s, %s, %s, %s, %s, %s, now())"
         return(flask.jsonify(executeSQL(query, ( _apiApi_id, _apiType, _apiUser_id, _apiCaption, _apiDescription, _apiMapping_json))))
     except Exception as e:
@@ -351,21 +355,28 @@ class widgetList(Resource):
 ###################### DASHBOARD API ######################
 class userDashboardList(Resource):
     def get(self, userId): #dashboard list
-        _apiUser_id = userId
+        if passAuth is False and userId is not flask.session['userId'][0]['id']:
+            return('access denied', 403)
         query = "SELECT id, name, icon, order_index FROM myboard.dashboard WHERE user_id=%s"
-        return(selectSQL(query, (_apiUser_id)))
+        return(selectSQL(query, (userId)))
     def post(self, userId): #insert
+        if passAuth is False and  userId is not flask.session['userId'][0]['id']:
+            return('access denied', 403)
         try:
             jsondata = request.get_json(force=True)
-            _user_id = userId
-            _name = jsondata['name']
-            _icon = jsondata['icon']
-            _order_index = jsondata['index']
-            query = "INSERT INTO myboard.dashboard (id, user_id, name, icon, order_index) VALUES (null, %s, %s, %s, %s)"
-            return(flask.jsonify(executeSQL(query, (_user_id, _name, _icon,_order_index))))
+            query = "INSERT INTO myboard.dashboard (user_id, name, icon, order_index) VALUES (%s, %s, %s, %s)"
+            for dashboard in jsondata:
+                _name = dashboard['name']
+                _icon = dashboard['icon']
+                _user_id = 0 if passAuth is True else flask.session['userId'][0]['id']
+                _order_index = dashboard['order_index']
+                executeSQL(query, (_user_id, _name, _icon, _order_index))
+            return('', 204)
         except Exception as e:
             return({'error':str(e)}, 500)
     def put(self, userId): # dashboard update
+        if passAuth is False and  userId is not flask.session['userId'][0]['id']:
+            return('access denied', 403)
         try:
             jsondata = request.get_json(force=True)
             query = "UPDATE myboard.dashboard SET name = %s, icon = %s, order_index = %s WHERE id = %s"
@@ -374,10 +385,23 @@ class userDashboardList(Resource):
                 _name = dashboard['name']
                 _icon = dashboard['icon']
                 _order_index = dashboard['order_index']
-                executeSQL(query, (_name, _icon, _order_index, _id ))
+                executeSQL(query, (_name, _icon, _order_index, _id))
             return('', 204)
         except Exception as e:
-            return({'error':str(e)}, 500)
+            return({'error': str(e)}, 500)
+    def delete(self, userId): # dashboard update
+        if passAuth is False and  userId is not flask.session['userId'][0]['id']:
+            return('access denied', 403)
+        try:
+            jsondata = request.get_json(force=True)
+            query = "DELETE FROM myboard.dashboard WHERE id = %s"
+            for dashboard in jsondata:
+                _id = dashboard['id']
+                executeSQL(query, (_id))
+            return('', 204)
+        except Exception as e:
+            return({'error': str(e)}, 500)
+
 
 class dashboard(Resource):
     # def get(self, dashboardId):
@@ -458,9 +482,12 @@ class dashboardWidgetData(Resource):
 class profile(Resource):
     def get(self):
       try:
-        return(flask.session['userId'][0]['id'])
-      except:
-        return("set user id err")
+        _user_id = 0 if passAuth is True else flask.session['userId'][0]['id']
+        query = "SELECT id, email, nickname, img FROM user WHERE id = %s"
+        rst = selectSQL(query, (_user_id))
+        return(flask.jsonify(rst[0]))
+      except Exception as e:
+        return(str(e), '500')
 
 
 api.add_resource(myboardApi, '/apis/<apiId>')
