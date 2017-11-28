@@ -23,7 +23,7 @@ import time, re
 from flask_restful import Resource, Api
 from flask_restful import reqparse
 
-passAuth = True
+passAuth = False
 app = flask.Flask(__name__, static_folder='assets')
 mysql = MySQL()
 api = Api(app)
@@ -31,7 +31,7 @@ CORS(app)
 
 @app.before_request
 def before_request():
-  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is True and request.endpoint != 'login':
+  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is False:
   # if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is False:
     return(flask.redirect(flask.url_for('oauth2callback')))
 
