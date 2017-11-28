@@ -30,8 +30,13 @@ CORS(app)
 
 @app.before_request
 def before_request():
-  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback':
+  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and request.endpoint != 'index':
     return(flask.redirect(flask.url_for('oauth2callback')))
+
+@app.route('/index')
+def homedirTest():
+  return("testpage")
+
 
 @app.route('/login')
 def index():
@@ -42,7 +47,21 @@ def index():
     return(flask.redirect(flask.url_for('oauth2callback')))
   else:
     http_auth = credentials.authorize(httplib2.Http())
-    return(flask.redirect(flask.url_for('/')))
+    return(flask.redirect(flask.url_for('index')))
+
+@app.route('/print')
+def printSession():
+  return(str(flask.session['credentials']))
+
+@app.route('/logout')
+def sessionOut():
+  if 'credentials' in flask.session:
+    del flask.session['credentials']
+    flask.session.clear()
+    return(flask.redirect(flask.url_for('index')))
+  return('err')
+  # return(flask.redirect(flask.url_for('/')))
+
 
 @app.route('/oauth2callback/')
 def oauth2callback():
@@ -59,24 +78,24 @@ def oauth2callback():
     flask.session['credentials'] =  credentials.to_json()
     #DB insert
     googleInfo = json.loads(flask.session['credentials'])
-    # print(googleInfo)
-    # print(type(googleInfo))
-    # print(googleInfo['access_token'])
-    # print(googleInfo['id_token']['email'])
+    print(googleInfo)
+    print(type(googleInfo))
+    print(googleInfo['access_token'])
+    print(googleInfo['id_token']['email'])
     
     reqURL = 'https://www.googleapis.com/plus/v1/people/me'
     headers = {'Authorization': 'Bearer '+googleInfo['access_token']}
     clientInfo = json.loads(requests.get(reqURL, headers = headers).text)
-    # print(clientInfo)
-    # print(clientInfo['displayName'])
-    # print(clientInfo['image']['url'])
+    print(clientInfo)
+    print(clientInfo['displayName'])
+    print(clientInfo['image']['url'])
     try:
       query = "INSERT INTO myboard.user (id,email,nickname,access_token,img) VALUES (null, %s,%s,%s,%s) ON DUPLICATE KEY UPDATE access_token=%s, nickname=%s, img=%s"
       executeSQL(query, (googleInfo['id_token']['email'], clientInfo['displayName'], googleInfo['access_token'],clientInfo['image']['url'], googleInfo['access_token'],clientInfo['displayName'],clientInfo['image']['url']))
       
       query = "SELECT id FROM myboard.user WHERE email = %s"
       flask.session['userId'] = selectSQL(query, (googleInfo['id_token']['email']))
-      return(flask.redirect(flask.url_for('index')))
+      return(flask.redirect(flask.url_for('apis')))
     except Exception as e:
       return({'error':str(e)}, 500)
 
@@ -438,8 +457,6 @@ class dashboardWidgetData(Resource):
 ###################### PROFILE API ######################
 class profile(Resource):
     def get(self):
-      # if 'credentials' not in flask.session: return(flask.redirect(flask.url_for('oauth2callback')))
-      # print(flask.session)
       try:
         return(flask.session['userId'][0]['id'])
       except:
