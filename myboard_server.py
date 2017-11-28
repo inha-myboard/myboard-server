@@ -35,10 +35,6 @@ def before_request():
   # if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is False:
     return(flask.redirect(flask.url_for('oauth2callback')))
 
-@app.route('/')
-@app.route('/index')
-def index():
-  return("testpage")
 
 @app.route('/login')
 def login():
@@ -49,7 +45,7 @@ def login():
     return(flask.redirect(flask.url_for('oauth2callback')))
   else:
     http_auth = credentials.authorize(httplib2.Http())
-    return(flask.redirect(flask.url_for('index')))
+    return(flask.redirect(flask.url_for('/')))
 
 @app.route('/print')
 def printSession():
@@ -60,7 +56,7 @@ def sessionOut():
   if 'credentials' in flask.session:
     del flask.session['credentials']
     flask.session.clear()
-    return(flask.redirect(flask.url_for('index')))
+    return(flask.redirect(flask.url_for('/')))
   return('err')
   # return(flask.redirect(flask.url_for('/')))
 
@@ -97,7 +93,7 @@ def oauth2callback():
       
       query = "SELECT id FROM myboard.user WHERE email = %s"
       flask.session['userId'] = selectSQL(query, (googleInfo['id_token']['email']))
-      return(flask.redirect(flask.url_for('index')))
+      return(flask.redirect(flask.url_for('/')))
     except Exception as e:
       return({'error':str(e)}, 500)
 
