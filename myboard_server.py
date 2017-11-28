@@ -36,6 +36,10 @@ def before_request():
     return(flask.redirect(flask.url_for('oauth2callback')))
 
 
+@app.route('/index')
+def index():
+  return('testPage')
+
 @app.route('/login')
 def login():
   # if 'credentials' not in flask.session:
