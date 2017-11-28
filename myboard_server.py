@@ -45,7 +45,7 @@ def login():
     return(flask.redirect(flask.url_for('oauth2callback')))
   else:
     http_auth = credentials.authorize(httplib2.Http())
-    return(flask.redirect(flask.url_for('/')))
+    return(flask.redirect(flask.url_for('index')))
 
 @app.route('/print')
 def printSession():
@@ -56,7 +56,7 @@ def sessionOut():
   if 'credentials' in flask.session:
     del flask.session['credentials']
     flask.session.clear()
-    return(flask.redirect(flask.url_for('/')))
+    return(flask.redirect(flask.url_for('index')))
   return('err')
   # return(flask.redirect(flask.url_for('/')))
 
@@ -93,7 +93,7 @@ def oauth2callback():
       
       query = "SELECT id FROM myboard.user WHERE email = %s"
       flask.session['userId'] = selectSQL(query, (googleInfo['id_token']['email']))
-      return(flask.redirect(flask.url_for('/')))
+      return(flask.redirect(flask.url_for('index')))
     except Exception as e:
       return({'error':str(e)}, 500)
 
