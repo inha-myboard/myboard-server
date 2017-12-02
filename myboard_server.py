@@ -444,7 +444,7 @@ class dashboardWidgetList(Resource):
     def get(self, dashboardId):
         _dashboardId = dashboardId
         
-        query = 'SELECT w.*, wp.props_json FROM widget_pos wp inner join widget w on wp.widget_id = w.id where dashboard_id = %s'
+        query = 'SELECT w.*, api.url, wp.props_json FROM widget_pos wp INNER JOIN widget w ON wp.widget_id = w.id INNER JOIN api ON w.api_id = api.id WHERE dashboard_id = %s'
         rst = selectSQL(query, (_dashboardId))
         return(flask.jsonify(rst))
     def post(self, dashboardId):
@@ -458,7 +458,7 @@ class dashboardWidgetList(Resource):
             for obj in jsondata:
                 widget_id = obj['id']
                 props_json = obj['props_json']
-                cursor.execute("INSERT INTO myboard.widget_pos (widget_id, dashboard_id, props_json) values (%s, %s, %s);", (widget_id, dashboardId, props_json))
+                cursor.execute("INSERT INTO myboard.widget_pos (widget_id, dashboard_id, props_json) VALUES (%s, %s, %s);", (widget_id, dashboardId, props_json))
             conn.commit()
         except Exception as e:
             conn.rollback()
