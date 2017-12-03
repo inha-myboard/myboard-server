@@ -31,19 +31,22 @@ CORS(app)
 
 @app.before_request
 def before_request():
-  if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is False:
+  granted_request = ['oauth2callback' , 'login', 'logout']
+  if 'credentials' not in flask.session and request.path.strip("/") not in granted_request and passAuth is False:
   # if 'credentials' not in flask.session and request.endpoint != 'oauth2callback' and passAuth is False:
-    return(flask.redirect(flask.url_for('oauth2callback')))
+    return ('Access denied', 403)
 
 @app.route('/')
 @app.route('/index')
 def index():
-  return("testPage")
+  return("dummy")
 
 @app.route('/login')
 def login():
   # if 'credentials' not in flask.session:
   #   return(flask.redirect(flask.url_for('oauth2callback')))
+  if 'credentials' not in flask.session:
+    return(flask.redirect(flask.url_for('oauth2callback')))
   credentials = client.OAuth2Credentials.from_json(flask.session['credentials'])
   if credentials.access_token_expired:
     return(flask.redirect(flask.url_for('oauth2callback')))
@@ -57,12 +60,8 @@ def printSession():
 
 @app.route('/logout')
 def sessionOut():
-  if 'credentials' in flask.session:
-    del flask.session['credentials']
-    flask.session.clear()
-    return(flask.redirect("/"))
-  return('err')
-  # return(flask.redirect(flask.url_for('/')))
+  flask.session.clear()
+  return(flask.redirect("/"))
 
 
 @app.route('/oauth2callback/')
